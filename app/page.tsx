@@ -11,9 +11,12 @@ export default function Home() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            Bach Money
+            Bach Money dApp
           </a>
         </h1>
+        <p className="text-center sm:text-left">
+          Decentralized Finance (DeFi)
+        </p>
         <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
           <li className="tracking-[-.01em]">
             A decentralized stablecoin platform.
@@ -21,27 +24,10 @@ export default function Home() {
           <li className="tracking-[-.01em]">
             Governed by the community of deflationary €BACH token holders.
           </li>
-          <li className="tracking-[-.01em]">
-            Built on Solana.
-          </li>
+          <li className="tracking-[-.01em]">Built on Solana.</li>
         </ol>
 
         <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://www.birdeye.so/token/CTQBjyrX8pYyqbNa8vAhQfnRXfu9cUxnvrxj5PvbzTmf"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/birdeye-logo-white.png"
-              alt="Birdeye logo"
-              width={20}
-              height={20}
-            />
-            Birdeye
-          </a>
           <a
             className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
             href="https://bach.money/whitepaper"
@@ -66,7 +52,8 @@ export default function Home() {
             width={16}
             height={16}
           />
-          Docs <span className="text-xs text-gray-400 dark:text-red-500">WIP</span>
+          Docs{" "}
+          <span className="text-xs text-gray-400 dark:text-red-500">WIP</span>
         </a>
         <a
           className="flex items-center gap-2 hover:underline hover:underline-offset-4"
@@ -81,7 +68,8 @@ export default function Home() {
             width={16}
             height={16}
           />
-          Stats <span className="text-xs text-gray-400 dark:text-red-500">WIP</span>
+          Stats{" "}
+          <span className="text-xs text-gray-400 dark:text-red-500">WIP</span>
         </a>
         <a
           className="flex items-center gap-2 hover:underline hover:underline-offset-4"
