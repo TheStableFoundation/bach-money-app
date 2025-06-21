@@ -14,9 +14,7 @@ export default function Home() {
             Bach Money dApp
           </a>
         </h1>
-        <p className="text-center sm:text-left">
-          Decentralized Finance (DeFi)
-        </p>
+        <p className="text-center sm:text-left">Decentralized Finance (DeFi)</p>
         <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
           <li className="tracking-[-.01em]">
             A decentralized stablecoin platform.
@@ -57,7 +55,7 @@ export default function Home() {
         </a>
         <a
           className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://stats.bach.money"
+          href="https://bachmoney-stats.5mb.app"
           target="_blank"
           rel="noopener noreferrer"
         >
