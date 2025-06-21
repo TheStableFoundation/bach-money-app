@@ -1,11 +1,12 @@
 {
   "name": "bach-money-app",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
+    "start-bachmoneyapp": "next start -p 3017",
     "lint": "next lint"
   },
   "dependencies": {
