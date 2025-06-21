@@ -1,0 +1,10 @@
+
+name = "bachmoneyapp"
+description = "bachmoneyapp"
+[project]
+id = 1
+name = "bachmoneyapp"
+repository = "bachmoneyapp"
+description = "bachmoneyapp"
+created_at = "2025-06-21T13:12:35.026068+00:00"
+updated_at = "2025-06-21T13:12:35.026068+00:00" 
