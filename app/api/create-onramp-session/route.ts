@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
       console.error("STRIPE_SECRET_KEY is not configured");
       return NextResponse.json(
         { error: "Server configuration error" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     if (!wallet_address) {
       return NextResponse.json(
         { error: "wallet_address is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
           }),
           destination_network: "solana",
         }).toString(),
-      }
+      },
     );
 
     if (!response.ok) {
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
           error: "Failed to create onramp session",
           details: errorData,
         },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { client_secret: session.client_secret },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error creating onramp session:", error);
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         error: "Internal server error",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
