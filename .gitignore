@@ -19,6 +19,7 @@
 
 # production
 /build
+/protocol/target
 
 # misc
 .DS_Store
