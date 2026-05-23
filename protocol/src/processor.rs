@@ -12,6 +12,7 @@ use solana_program::{
     sysvar::Sysvar,
 };
 use solana_system_interface::{instruction as system_instruction, program as system_program};
+#[allow(deprecated)]
 use spl_token::{
     instruction as token_instruction,
     state::{Account as TokenAccount, Mint},
@@ -933,6 +934,7 @@ impl Processor {
         collateral: &CollateralConfig,
         vault: &VaultPosition,
     ) -> Result<bool, ProgramError> {
+        let _ = config;
         if vault.debt_amount == 0 {
             return Ok(true);
         }
@@ -943,9 +945,7 @@ impl Processor {
             collateral.price_e6,
         )?;
         let ratio = collateral_ratio_bps(collateral_value, vault.debt_amount)?;
-        let required_ratio = collateral
-            .liquidation_ratio_bps
-            .max(config.min_collateral_ratio_bps) as u64;
+        let required_ratio = collateral.liquidation_ratio_bps as u64;
         Ok(ratio >= required_ratio)
     }
 

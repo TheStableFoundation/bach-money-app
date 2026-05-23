@@ -38,14 +38,14 @@ Collateral is pooled in a per-market SPL token vault owned by the config PDA. Ea
 ## Build
 
 ```bash
-cd /home/runner/work/bach-money-app/bach-money-app/protocol
+cd protocol
 cargo test
 ```
 
 To build a deployable shared object:
 
 ```bash
-cd /home/runner/work/bach-money-app/bach-money-app/protocol
+cd protocol
 cargo build --release
 ```
 
