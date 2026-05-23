@@ -50,7 +50,10 @@ pub fn collateral_value_e6(
         .ok_or(BachError::MathOverflow)
 }
 
-pub fn max_debt_for_value(collateral_value_e6: u64, required_ratio_bps: u16) -> Result<u64, BachError> {
+pub fn max_debt_for_value(
+    collateral_value_e6: u64,
+    required_ratio_bps: u16,
+) -> Result<u64, BachError> {
     if required_ratio_bps == 0 {
         return Err(BachError::InvalidRiskParameter);
     }

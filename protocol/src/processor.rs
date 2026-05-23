@@ -5,13 +5,13 @@ use solana_program::{
     entrypoint::ProgramResult,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
+    program_option::COption,
     program_pack::Pack,
     pubkey::Pubkey,
     rent::Rent,
-    system_instruction,
-    system_program,
     sysvar::Sysvar,
 };
+use solana_system_interface::{instruction as system_instruction, program as system_program};
 use spl_token::{
     instruction as token_instruction,
     state::{Account as TokenAccount, Mint},
@@ -23,8 +23,8 @@ use crate::{
     error::BachError,
     instruction::BachInstruction,
     math::{
-        accrue_stability_fee, checked_add, checked_sub, collateral_ratio_bps,
-        collateral_value_e6, liquidation_payout, max_debt_for_value,
+        accrue_stability_fee, checked_add, checked_sub, collateral_ratio_bps, collateral_value_e6,
+        liquidation_payout, max_debt_for_value,
     },
     state::{CollateralConfig, ProtocolConfig, VaultPosition},
 };
@@ -93,9 +93,7 @@ impl Processor {
             BachInstruction::MintStablecoin { amount } => {
                 Self::mint_stablecoin(program_id, accounts, amount)
             }
-            BachInstruction::BurnStablecoin { amount } => {
-                Self::burn_stablecoin(accounts, amount)
-            }
+            BachInstruction::BurnStablecoin { amount } => Self::burn_stablecoin(accounts, amount),
             BachInstruction::LiquidateVault { repay_amount } => {
                 Self::liquidate_vault(program_id, accounts, repay_amount)
             }
@@ -157,7 +155,7 @@ impl Processor {
         if stable_mint.decimals != STABLE_MINT_DECIMALS {
             return Err(BachError::InvalidMint.into());
         }
-        if stable_mint.mint_authority != spl_token::solana_program::program_option::COption::Some(config_pda) {
+        if stable_mint.mint_authority != COption::Some(config_pda) {
             return Err(BachError::Unauthorized.into());
         }
 
@@ -217,8 +215,10 @@ impl Processor {
             return Err(BachError::InvalidPda.into());
         }
 
-        let (collateral_pda, bump) =
-            Pubkey::find_program_address(&[COLLATERAL_SEED, collateral_mint_info.key.as_ref()], program_id);
+        let (collateral_pda, bump) = Pubkey::find_program_address(
+            &[COLLATERAL_SEED, collateral_mint_info.key.as_ref()],
+            program_id,
+        );
         if collateral_info.key != &collateral_pda {
             return Err(BachError::InvalidPda.into());
         }
@@ -233,10 +233,12 @@ impl Processor {
             )?;
         }
 
-        let collateral_mint =
-            Mint::unpack(&collateral_mint_info.try_borrow_data()?).map_err(|_| BachError::InvalidMint)?;
+        let collateral_mint = Mint::unpack(&collateral_mint_info.try_borrow_data()?)
+            .map_err(|_| BachError::InvalidMint)?;
         let collateral_vault = Self::load_token_account(collateral_vault_info)?;
-        if collateral_vault.mint != *collateral_mint_info.key || collateral_vault.owner != *config_info.key {
+        if collateral_vault.mint != *collateral_mint_info.key
+            || collateral_vault.owner != *config_info.key
+        {
             return Err(BachError::InvalidTokenAccount.into());
         }
 
@@ -343,7 +345,11 @@ impl Processor {
         let _config = Self::load_protocol_config(config_info)?;
         let collateral = Self::load_collateral_config(collateral_info)?;
         let (vault_pda, bump) = Pubkey::find_program_address(
-            &[VAULT_SEED, owner_info.key.as_ref(), collateral.collateral_mint.as_ref()],
+            &[
+                VAULT_SEED,
+                owner_info.key.as_ref(),
+                collateral.collateral_mint.as_ref(),
+            ],
             program_id,
         );
         if vault_info.key != &vault_pda {
@@ -357,7 +363,12 @@ impl Processor {
                 system_program_info,
                 program_id,
                 VaultPosition::LEN,
-                &[VAULT_SEED, owner_info.key.as_ref(), collateral.collateral_mint.as_ref(), &[bump]],
+                &[
+                    VAULT_SEED,
+                    owner_info.key.as_ref(),
+                    collateral.collateral_mint.as_ref(),
+                    &[bump],
+                ],
             )?;
         }
 
@@ -639,7 +650,7 @@ impl Processor {
     }
 
     fn liquidate_vault(
-        program_id: &Pubkey,
+        _program_id: &Pubkey,
         accounts: &[AccountInfo],
         repay_amount: u64,
     ) -> ProgramResult {
@@ -732,7 +743,8 @@ impl Processor {
         vault.debt_amount = checked_sub(vault.debt_amount, repay_amount)?;
         vault.collateral_amount = checked_sub(vault.collateral_amount, collateral_to_seize)?;
         collateral.total_debt = checked_sub(collateral.total_debt, repay_amount)?;
-        collateral.total_collateral = checked_sub(collateral.total_collateral, collateral_to_seize)?;
+        collateral.total_collateral =
+            checked_sub(collateral.total_collateral, collateral_to_seize)?;
 
         Self::store_state(collateral_info, &collateral)?;
         Self::store_state(vault_info, &vault)
@@ -774,7 +786,11 @@ impl Processor {
                 size as u64,
                 program_id,
             ),
-            &[payer_info.clone(), account_info.clone(), system_program_info.clone()],
+            &[
+                payer_info.clone(),
+                account_info.clone(),
+                system_program_info.clone(),
+            ],
             &[signer_seeds],
         )
     }
@@ -788,7 +804,9 @@ impl Processor {
         Ok(config)
     }
 
-    fn load_collateral_config(account_info: &AccountInfo) -> Result<CollateralConfig, ProgramError> {
+    fn load_collateral_config(
+        account_info: &AccountInfo,
+    ) -> Result<CollateralConfig, ProgramError> {
         let collateral = CollateralConfig::try_from_slice(&account_info.try_borrow_data()?)
             .map_err(|_| BachError::Uninitialized)?;
         if !collateral.is_initialized {
@@ -813,7 +831,8 @@ impl Processor {
     }
 
     fn load_token_account(account_info: &AccountInfo) -> Result<TokenAccount, ProgramError> {
-        TokenAccount::unpack(&account_info.try_borrow_data()?).map_err(|_| BachError::InvalidTokenAccount.into())
+        TokenAccount::unpack(&account_info.try_borrow_data()?)
+            .map_err(|_| BachError::InvalidTokenAccount.into())
     }
 
     fn validate_token_program(token_program_info: &AccountInfo) -> ProgramResult {
@@ -831,10 +850,16 @@ impl Processor {
         vault_info: &AccountInfo,
     ) -> ProgramResult {
         let (vault_pda, _) = Pubkey::find_program_address(
-            &[VAULT_SEED, owner.as_ref(), collateral.collateral_mint.as_ref()],
+            &[
+                VAULT_SEED,
+                owner.as_ref(),
+                collateral.collateral_mint.as_ref(),
+            ],
             program_id,
         );
-        if vault_info.key != &vault_pda || vault.owner != *owner || vault.collateral_mint != collateral.collateral_mint
+        if vault_info.key != &vault_pda
+            || vault.owner != *owner
+            || vault.collateral_mint != collateral.collateral_mint
         {
             return Err(BachError::InvalidPda.into());
         }
@@ -850,7 +875,9 @@ impl Processor {
     ) -> ProgramResult {
         let user_collateral = Self::load_token_account(user_collateral_info)?;
         let collateral_vault = Self::load_token_account(collateral_vault_info)?;
-        if user_collateral.owner != *user_owner || user_collateral.mint != collateral.collateral_mint {
+        if user_collateral.owner != *user_owner
+            || user_collateral.mint != collateral.collateral_mint
+        {
             return Err(BachError::InvalidTokenAccount.into());
         }
         if collateral_vault.owner != *protocol_authority
@@ -871,8 +898,8 @@ impl Processor {
         if stable_mint_info.key != &config.stable_mint {
             return Err(BachError::InvalidMint.into());
         }
-        let stable_mint =
-            Mint::unpack(&stable_mint_info.try_borrow_data()?).map_err(|_| BachError::InvalidMint)?;
+        let stable_mint = Mint::unpack(&stable_mint_info.try_borrow_data()?)
+            .map_err(|_| BachError::InvalidMint)?;
         if stable_mint.decimals != STABLE_MINT_DECIMALS {
             return Err(BachError::InvalidMint.into());
         }
@@ -893,7 +920,8 @@ impl Processor {
         let elapsed = now.saturating_sub(vault.last_accrual_timestamp);
         let accrued = accrue_stability_fee(vault.debt_amount, config.stability_fee_bps, elapsed)?;
         if accrued > vault.debt_amount {
-            collateral.total_debt = checked_add(collateral.total_debt, accrued - vault.debt_amount)?;
+            collateral.total_debt =
+                checked_add(collateral.total_debt, accrued - vault.debt_amount)?;
         }
         vault.debt_amount = accrued;
         vault.last_accrual_timestamp = now;
@@ -909,8 +937,11 @@ impl Processor {
             return Ok(true);
         }
 
-        let collateral_value =
-            collateral_value_e6(vault.collateral_amount, collateral.collateral_decimals, collateral.price_e6)?;
+        let collateral_value = collateral_value_e6(
+            vault.collateral_amount,
+            collateral.collateral_decimals,
+            collateral.price_e6,
+        )?;
         let ratio = collateral_ratio_bps(collateral_value, vault.debt_amount)?;
         let required_ratio = collateral
             .liquidation_ratio_bps
@@ -923,8 +954,11 @@ impl Processor {
         collateral: &CollateralConfig,
         vault: &VaultPosition,
     ) -> ProgramResult {
-        let collateral_value =
-            collateral_value_e6(vault.collateral_amount, collateral.collateral_decimals, collateral.price_e6)?;
+        let collateral_value = collateral_value_e6(
+            vault.collateral_amount,
+            collateral.collateral_decimals,
+            collateral.price_e6,
+        )?;
         let required_ratio = collateral
             .liquidation_ratio_bps
             .max(config.min_collateral_ratio_bps);
