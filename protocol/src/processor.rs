@@ -693,7 +693,7 @@ impl Processor {
         )?;
         Self::accrue_vault_debt(config_info, &mut collateral, &mut vault)?;
 
-        if Self::vault_is_healthy(&config, &collateral, &vault)? {
+        if Self::vault_is_healthy(&collateral, &vault)? {
             return Err(BachError::VaultHealthy.into());
         }
 
@@ -930,11 +930,9 @@ impl Processor {
     }
 
     fn vault_is_healthy(
-        config: &ProtocolConfig,
         collateral: &CollateralConfig,
         vault: &VaultPosition,
     ) -> Result<bool, ProgramError> {
-        let _ = config;
         if vault.debt_amount == 0 {
             return Ok(true);
         }
