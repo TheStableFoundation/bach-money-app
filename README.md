@@ -1,4 +1,4 @@
-# Bach Money App
+# Bach Money Protocol
 
 Decentralized application for ***The Stable Foundation decentralized stablecoin platform***.
 
@@ -13,8 +13,14 @@ pnpm dev
 
 Then start hacking away.
 
-## Deploy on smbCloud
+## Deployed on smbCloud
 
-[![Deploy to smbCloud](https://github.com/smbcloudXYZ/smbcloud-cli/blob/development/deploy.svg)](https://smbcloud.xyz)
+[Deploy NextJS app to production](https://smbcloud.xyz/services) with [smbCloud](https://smbcloud.xyz).
 
-Our way to deploy this Next.js app is to use the [smbCloud frontend platform](https://smbcloud.xyz/).
+## License
+
+[MIT License](LICENSE)
+
+## Copyright
+
+© 2026 [The Stable Foundation](https://thestablefoundation.org) (developed by [Splitfire AB](https://5mb.app)).
