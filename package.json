@@ -1,29 +1,19 @@
 {
   "name": "bach-money-app",
   "version": "0.1.0",
-  "private": false,
+  "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start",
-    "start-bachmoneyapp": "next start -p 3017",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "next": "16.0.10",
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.18",
-    "@types/node": "^20.19.26",
-    "@types/react": "19.2.7",
-    "@types/react-dom": "19.2.3",
-    "tailwindcss": "^4.1.18",
+    "turbo": "^2.5.4",
     "typescript": "^5.9.3"
   },
-  "overrides": {
-    "@types/react": "19.2.7",
-    "@types/react-dom": "19.2.3"
-  }
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@10.18.1"
 }
