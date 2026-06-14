@@ -4,5 +4,17 @@ packages:
   - "scripts"
 
 onlyBuiltDependencies:
+  - "@swc/core"
   - "@tailwindcss/oxide"
+  - core-js-pure
+  - esbuild
   - sharp
+  - unrs-resolver
+
+# @next/bundle-analyzer imports `next` types but doesn't declare it as a
+# dependency; declaring the peer makes it resolve `next` from the importer
+# (apps/web) instead of an arbitrary hoisted copy.
+packageExtensions:
+  "@next/bundle-analyzer":
+    peerDependencies:
+      next: "*"
