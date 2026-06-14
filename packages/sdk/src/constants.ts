@@ -6,11 +6,11 @@ export const COLLATERAL_SEED = Buffer.from("collateral");
 export const VAULT_SEED = Buffer.from("vault");
 
 export const STABLE_MINT_DECIMALS = 6;
-export const STABLECOIN_NAME = "Bach Dollar";
-export const STABLECOIN_SYMBOL = "BACHD";
+export const STABLECOIN_NAME = "toneUSD";
+export const STABLECOIN_SYMBOL = "toneUSD";
 
 export const GOVERNANCE_MINT = new PublicKey(
-  "CTQBjyrX8pYyqbNa8vAhQfnRXfu9cUxnvrxj5PvbzTmf",
+  "DENNuKzCcrLhEtxZ8tm7nSeef8qvKgGGrdxX6euNkNS7",
 );
 
 // BPS helpers
