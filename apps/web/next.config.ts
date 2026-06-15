@@ -1,9 +1,15 @@
+import path from "node:path"
+
 import withBundleAnalyzer from "@next/bundle-analyzer"
 import { type NextConfig } from "next"
 
 import { env } from "./env.mjs"
 
 const config: NextConfig = {
+  // Self-contained server bundle for smbCloud nextjs-ssr deploys.
+  output: "standalone",
+  // Trace workspace deps from the monorepo root.
+  outputFileTracingRoot: path.join(__dirname, "../../"),
   reactStrictMode: true,
   logging: {
     fetches: {
