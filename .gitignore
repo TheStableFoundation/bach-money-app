@@ -48,6 +48,9 @@ yarn-error.log*
 # bootstrap script output (generated devnet/testnet state)
 scripts/bootstrap-output.*.json
 
+# faucet keypair (devnet secret — never commit)
+scripts/.faucet-keypair.*.json
+
 # vercel
 .vercel
 

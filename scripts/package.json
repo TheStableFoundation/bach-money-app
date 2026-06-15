@@ -5,9 +5,13 @@
   "type": "module",
   "description": "Operational scripts for the Bach Money protocol (devnet bootstrap, etc.)",
   "scripts": {
-    "bootstrap:devnet": "tsx bootstrap-devnet.ts"
+    "bootstrap:devnet": "tsx bootstrap-devnet.ts",
+    "smoke:devnet": "tsx vault-smoke-devnet.ts",
+    "liquidation:devnet": "tsx liquidation-smoke-devnet.ts",
+    "setup-faucet:devnet": "tsx setup-faucet-devnet.ts"
   },
   "dependencies": {
+    "@bach-money/sdk": "workspace:*",
     "@solana/spl-token": "^0.4.9",
     "@solana/web3.js": "^1.98.2"
   },
