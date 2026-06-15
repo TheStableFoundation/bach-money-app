@@ -17,8 +17,17 @@
 | testnet | `A6a2s9LTZcYZQgxrDatLHYfvHhJEfb5ZWuFENhHtxJtR` |
 
 The `GOVERNANCE_MINT` constant in `src/lib.rs` is compiled to a single network's
-mint and validated at `InitializeProtocol`; it currently targets **devnet**
-(`DENNuKzC…`).
+mint and validated by key equality at `InitializeProtocol`. The network is
+selected by a Cargo feature, with **devnet** as the default:
+
+| Build | Feature | GOVERNANCE_MINT |
+| --- | --- | --- |
+| devnet (default) | _none_ | `DENNuKzC…` |
+| testnet | `--features testnet` | `A6a2s9LT…` |
+| mainnet-beta | `--features mainnet` | `CTQBjyrX…` |
+
+`testnet` and `mainnet` override the default, so you do **not** need
+`--no-default-features`.
 
 ## v1 scope
 
@@ -53,12 +62,27 @@ cd protocol
 cargo test
 ```
 
-To build a deployable shared object:
+To build a deployable shared object, pick the target network's feature:
 
 ```bash
 cd protocol
-cargo build --release
+cargo build-sbf                      # devnet (default)
+cargo build-sbf --features testnet   # testnet
+cargo build-sbf --features mainnet   # mainnet-beta
 ```
+
+Deploy each build from the same program keypair so the program id
+(`yh9n52WPmWJBYTsBU1kBYfLSuxWY8zZTUPbjDB6d7wc`) is identical across clusters:
+
+```bash
+solana program deploy \
+  --url testnet \
+  --program-id <program-keypair.json> \
+  target/deploy/protocol.so
+```
+
+Then bootstrap the cluster with `@bach-money/scripts`
+(`pnpm --filter @bach-money/scripts bootstrap:testnet`).
 
 ## Notes
 

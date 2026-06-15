@@ -1,5 +1,5 @@
 /**
- * Liquidation smoke test (devnet).
+ * Liquidation smoke test (devnet / testnet).
  *
  * Proves the liquidateVault handler end-to-end on a DEDICATED collateral market
  * (its own mint) so the main market and existing vaults are untouched:
@@ -7,17 +7,14 @@
  *   -> liquidate -> verify seized collateral + reduced debt.
  *
  * Run: pnpm --filter @bach-money/scripts liquidation:devnet
+ *      pnpm --filter @bach-money/scripts liquidation:testnet
  */
 
-import { homedir } from "node:os";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import {
   Connection,
   Keypair,
   PublicKey,
   Transaction,
-  clusterApiUrl,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
 import {
@@ -39,13 +36,11 @@ import {
   findCollateralPda,
   findVaultPda,
 } from "@bach-money/sdk";
+import { resolveNetwork, resolveToneUsdMint, loadKeypair } from "./networks.ts";
 
-const RPC = process.env.RPC_URL ?? clusterApiUrl("devnet");
-const KEYPAIR_PATH =
-  process.env.KEYPAIR_PATH ?? join(homedir(), ".config", "solana", "main_0.json");
-
-const PROGRAM_ID = new PublicKey("yh9n52WPmWJBYTsBU1kBYfLSuxWY8zZTUPbjDB6d7wc");
-const TONEUSD_MINT = new PublicKey("B4wtMQyvYaY9bDNTnBY3sRczqRUp3zW8P7CaFqLVCb5f");
+const NET = resolveNetwork();
+const { cluster, rpcUrl, keypairPath, programId } = NET;
+const TONEUSD_MINT = resolveToneUsdMint(NET);
 
 const DEC = 9;
 const ONE = 10n ** BigInt(DEC);
@@ -59,13 +54,10 @@ const REPAY = 30n * TONE; // liquidator repays 30 toneUSD
 const fmt = (a: bigint, d: number) =>
   `${a / 10n ** BigInt(d)}.${(a % 10n ** BigInt(d)).toString().padStart(d, "0").replace(/0+$/, "") || "0"}`;
 
-const load = (p: string) =>
-  Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync(p, "utf8")) as number[]));
-
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// Public devnet RPC is load-balanced; a "confirmed" write may not be visible on
-// the node that simulates the next tx. Retry transient failures with a delay.
+// Public cluster RPCs are load-balanced; a "confirmed" write may not be visible
+// on the node that simulates the next tx. Retry transient failures with a delay.
 async function send(c: Connection, payer: Keypair, tx: Transaction, label: string, tries = 5) {
   for (let i = 0; i < tries; i++) {
     try {
@@ -91,13 +83,13 @@ async function waitFor(c: Connection, pk: PublicKey, tries = 15) {
 }
 
 async function main() {
-  const c = new Connection(RPC, "confirmed");
-  const payer = load(KEYPAIR_PATH);
+  const c = new Connection(rpcUrl, "confirmed");
+  const payer = loadKeypair(keypairPath);
   const owner = payer.publicKey;
-  const client = new BachMoneyClient(c, PROGRAM_ID);
-  const [configPda] = await findConfigPda(PROGRAM_ID);
+  const client = new BachMoneyClient(c, programId);
+  const [configPda] = await findConfigPda(programId);
 
-  console.log("Liquidation smoke test (devnet)");
+  console.log(`Liquidation smoke test (${cluster})`);
   console.log("  payer:", owner.toBase58());
 
   // Fresh dedicated collateral market so the main market is untouched.
@@ -109,8 +101,8 @@ async function main() {
   const vaultAta = await getOrCreateAssociatedTokenAccount(c, payer, mint, configPda, true);
   const collateralVault = vaultAta.address;
 
-  const [collateralPda] = await findCollateralPda(mint, PROGRAM_ID);
-  const [vaultPda] = await findVaultPda(owner, mint, PROGRAM_ID);
+  const [collateralPda] = await findCollateralPda(mint, programId);
+  const [vaultPda] = await findVaultPda(owner, mint, programId);
   const stableAta = (await getOrCreateAssociatedTokenAccount(c, payer, TONEUSD_MINT, owner)).address;
 
   // Ensure the new mint + protocol-owned vault are visible before registering.
@@ -131,7 +123,7 @@ async function main() {
     payer,
     new Transaction().add(
       initializeCollateral(
-        { payer: owner, configPda, collateralPda, collateralMint: mint, collateralVault, programId: PROGRAM_ID },
+        { payer: owner, configPda, collateralPda, collateralMint: mint, collateralVault, programId },
         { priceE6: PRICE_START, debtCeiling: 1_000_000n * TONE, liquidationRatioBps: 15_000 },
       ),
     ),
@@ -140,13 +132,13 @@ async function main() {
 
   console.log("[3] Open vault, deposit 1, mint 60 toneUSD...");
   await send(c, payer, new Transaction().add(
-    openVault({ owner, configPda, collateralConfigPda: collateralPda, vaultPda, programId: PROGRAM_ID }),
+    openVault({ owner, configPda, collateralConfigPda: collateralPda, vaultPda, programId }),
   ), "openVault");
   await send(c, payer, new Transaction().add(
-    depositCollateral({ owner, configPda, collateralConfigPda: collateralPda, vaultPda, ownerCollateralAta: ownerColl.address, collateralVault, tokenProgram: TOKEN_PROGRAM_ID, programId: PROGRAM_ID }, DEPOSIT),
+    depositCollateral({ owner, configPda, collateralConfigPda: collateralPda, vaultPda, ownerCollateralAta: ownerColl.address, collateralVault, tokenProgram: TOKEN_PROGRAM_ID, programId }, DEPOSIT),
   ), "deposit");
   await send(c, payer, new Transaction().add(
-    mintStablecoin({ owner, configPda, collateralConfigPda: collateralPda, vaultPda, stableMint: TONEUSD_MINT, ownerStableAta: stableAta, tokenProgram: TOKEN_PROGRAM_ID, programId: PROGRAM_ID }, MINT),
+    mintStablecoin({ owner, configPda, collateralConfigPda: collateralPda, vaultPda, stableMint: TONEUSD_MINT, ownerStableAta: stableAta, tokenProgram: TOKEN_PROGRAM_ID, programId }, MINT),
   ), "mint");
 
   let market = await client.fetchCollateralConfig(mint);
@@ -155,7 +147,7 @@ async function main() {
 
   console.log("[4] Drop oracle price to $80...");
   await send(c, payer, new Transaction().add(
-    updateOraclePrice({ oracleAuthority: owner, configPda, collateralConfigPda: collateralPda, programId: PROGRAM_ID }, PRICE_DROP),
+    updateOraclePrice({ oracleAuthority: owner, configPda, collateralConfigPda: collateralPda, programId }, PRICE_DROP),
   ), "updateOraclePrice");
 
   market = await client.fetchCollateralConfig(mint);
@@ -166,7 +158,7 @@ async function main() {
 
   console.log("[5] Liquidate (repay 30 toneUSD)...");
   await send(c, payer, new Transaction().add(
-    liquidateVault({ liquidator: owner, configPda, collateralConfigPda: collateralPda, vaultPda, stableMint: TONEUSD_MINT, liquidatorStableAta: stableAta, collateralVault, liquidatorCollateralAta: ownerColl.address, tokenProgram: TOKEN_PROGRAM_ID, programId: PROGRAM_ID }, REPAY),
+    liquidateVault({ liquidator: owner, configPda, collateralConfigPda: collateralPda, vaultPda, stableMint: TONEUSD_MINT, liquidatorStableAta: stableAta, collateralVault, liquidatorCollateralAta: ownerColl.address, tokenProgram: TOKEN_PROGRAM_ID, programId }, REPAY),
   ), "liquidateVault");
 
   vault = await client.fetchVaultPosition(owner, mint);
@@ -177,7 +169,7 @@ async function main() {
   console.log("  vault debt now      :", fmt(vault!.debtAmount, 6), "toneUSD (was 60)");
   console.log("  vault collateral now:", fmt(vault!.collateralAmount, DEC), "(was 1)");
   console.log("  collateral seized   :", fmt(seized, DEC), "(~$" + fmt(seized * PRICE_DROP / ONE, 6) + " incl. 13% penalty on $30)");
-  console.log("\n✅ liquidateVault works on devnet.");
+  console.log(`\n✅ liquidateVault works on ${cluster}.`);
 }
 
 main().catch((e) => {

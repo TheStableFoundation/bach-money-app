@@ -17,6 +17,7 @@ import {
   PROGRAM_ID,
   COLLATERAL_MINT,
   TOKENS,
+  NETWORK_LABEL,
   explorerAddress,
   explorerTx,
   shortAddress,
@@ -129,13 +130,14 @@ export function VaultDashboard() {
       <main className="mx-auto max-w-5xl px-6 pb-24 pt-10 sm:px-8">
         <h1 className="text-2xl font-semibold tracking-tight">Vault</h1>
         <p className="mt-1 text-sm text-muted">
-          Lock collateral and mint toneUSD on Solana devnet.
+          Lock collateral and mint toneUSD on Solana {NETWORK_LABEL.toLowerCase()}.
         </p>
 
         {error && (
           <Banner kind="error">
-            Could not read the protocol: {error}. The public devnet RPC is
-            rate-limited; set NEXT_PUBLIC_SOLANA_RPC_URL to a private endpoint.
+            Could not read the protocol: {error}. The public{" "}
+            {NETWORK_LABEL.toLowerCase()} RPC is rate-limited; set
+            NEXT_PUBLIC_SOLANA_RPC_URL to a private endpoint.
           </Banner>
         )}
 
@@ -209,7 +211,7 @@ function Header() {
             Bach Money
           </span>
           <span className="label rounded-full border border-border px-2 py-0.5">
-            Devnet
+            {NETWORK_LABEL}
           </span>
         </div>
         <WalletButton />
@@ -763,8 +765,8 @@ function ConnectPrompt() {
     <Card title="Your position">
       <div className="flex flex-col items-start gap-4 py-2">
         <p className="text-sm text-muted">
-          Connect a Solana wallet (set to devnet) to open a vault and mint
-          toneUSD.
+          Connect a Solana wallet (set to {NETWORK_LABEL.toLowerCase()}) to open
+          a vault and mint toneUSD.
         </p>
         <WalletButton />
       </div>

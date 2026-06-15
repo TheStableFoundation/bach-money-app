@@ -1,8 +1,11 @@
 # @bach-money/scripts
 
-Operational scripts for the Bach Money protocol.
+Operational scripts for the Bach Money protocol. Every script targets a single
+cluster, chosen by the `CLUSTER` env var (`devnet` or `testnet`, default
+`devnet`). The npm scripts set it for you (`:devnet` / `:testnet` variants), and
+shared resolution lives in `networks.ts`.
 
-## bootstrap-devnet.ts
+## bootstrap.ts
 
 Takes a freshly deployed program and brings the protocol to a usable state:
 creates the toneUSD stablecoin mint, initializes the protocol config, registers a
@@ -15,14 +18,18 @@ and the account orderings mirror `protocol/src/processor.rs`.
 
 ### Prerequisites
 
-- The program is deployed to devnet (`yh9n52WPmWJBYTsBU1kBYfLSuxWY8zZTUPbjDB6d7wc`).
-- The fee-payer keypair has some devnet SOL (a few tenths of a SOL is plenty).
+- The program is deployed to the target cluster. It is deployed from one program
+  keypair, so its id is the same on devnet and testnet
+  (`yh9n52WPmWJBYTsBU1kBYfLSuxWY8zZTUPbjDB6d7wc`).
+- The fee-payer keypair has some SOL on that cluster (a few tenths of a SOL is
+  plenty; `solana airdrop` works on devnet, the testnet faucet on testnet).
 
 ### Run
 
 ```bash
-pnpm install                                   # from the repo root, once
+pnpm install                                          # from the repo root, once
 pnpm --filter @bach-money/scripts bootstrap:devnet
+pnpm --filter @bach-money/scripts bootstrap:testnet
 ```
 
 ### What it does
@@ -35,18 +42,67 @@ pnpm --filter @bach-money/scripts bootstrap:devnet
 6. Mint 1,000 test collateral tokens to the payer.
 
 It is idempotent: re-running skips on-chain state that already exists and reuses
-mints recorded in `bootstrap-output.devnet.json`.
+mints recorded per cluster in `bootstrap-output.<cluster>.json`.
+
+The toneUSD and collateral mints are new on each cluster. After bootstrapping
+testnet, feed the printed mints to the frontend (see "Wiring the frontend").
 
 ### Environment overrides
 
-| Variable          | Default                                   |
-| ----------------- | ----------------------------------------- |
-| `RPC_URL`         | `clusterApiUrl("devnet")`                 |
-| `KEYPAIR_PATH`    | `~/.config/solana/main_0.json`            |
-| `PROGRAM_ID`      | the devnet deployment                     |
-| `TONEUSD_MINT`      | reuse an existing toneUSD mint              |
-| `COLLATERAL_MINT` | reuse an existing collateral mint         |
+Shared across all scripts (see `networks.ts`):
 
-The printed addresses (config PDA, toneUSD mint, collateral mint, collateral PDA,
-collateral vault) are what you feed into `@bach-money/sdk` to open and operate a
-vault.
+| Variable          | Default                                       |
+| ----------------- | --------------------------------------------- |
+| `CLUSTER`         | `devnet`                                      |
+| `RPC_URL`         | `clusterApiUrl(CLUSTER)`                       |
+| `KEYPAIR_PATH`    | `~/.config/solana/main_0.json`                |
+| `PROGRAM_ID`      | the shared deployment id                       |
+| `GOVERNANCE_MINT` | the constant from `protocol/src/lib.rs`        |
+
+Bootstrap-specific:
+
+| Variable             | Default                                    |
+| -------------------- | ------------------------------------------ |
+| `TONEUSD_MINT`       | reuse an existing toneUSD mint              |
+| `COLLATERAL_MINT`    | reuse an existing collateral mint          |
+| `INIT_PROTOCOL_ONLY` | set to `1` to stop after InitializeProtocol |
+
+## vault-smoke.ts / liquidation-smoke.ts
+
+End-to-end checks against the live program using the same SDK as the frontend.
+`smoke` runs open -> deposit -> mint -> repay -> withdraw on the bootstrapped
+market; `liquidation` spins up a throwaway collateral market and proves
+`liquidateVault`. Both read the cluster's mints from
+`bootstrap-output.<cluster>.json` (or `TONEUSD_MINT` / `COLLATERAL_MINT`).
+
+```bash
+pnpm --filter @bach-money/scripts smoke:devnet
+pnpm --filter @bach-money/scripts smoke:testnet
+pnpm --filter @bach-money/scripts liquidation:devnet
+pnpm --filter @bach-money/scripts liquidation:testnet
+```
+
+## setup-faucet.ts
+
+Moves the collateral mint's authority to a dedicated, gitignored faucet keypair
+(`.faucet-keypair.<cluster>.json`) so the app's `/api/faucet` route can hand out
+test collateral. Prints `FAUCET_SECRET_KEY` for `apps/app/.env.local`.
+
+```bash
+pnpm --filter @bach-money/scripts setup-faucet:devnet
+pnpm --filter @bach-money/scripts setup-faucet:testnet
+```
+
+## Wiring the frontend
+
+The app picks its cluster from `NEXT_PUBLIC_SOLANA_CLUSTER` (`devnet` by
+default). Devnet addresses are baked into `apps/app/lib/solana/config.ts`. For
+testnet, set the mints bootstrap printed:
+
+```dotenv
+NEXT_PUBLIC_SOLANA_CLUSTER=testnet
+NEXT_PUBLIC_TONEUSD_MINT=<toneUSD mint from bootstrap:testnet>
+NEXT_PUBLIC_COLLATERAL_MINT=<collateral mint from bootstrap:testnet>
+NEXT_PUBLIC_SOLANA_RPC_URL=<private testnet RPC>   # optional but recommended
+FAUCET_SECRET_KEY=<from setup-faucet:testnet>
+```

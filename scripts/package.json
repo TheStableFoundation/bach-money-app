@@ -3,12 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Operational scripts for the Bach Money protocol (devnet bootstrap, etc.)",
+  "description": "Operational scripts for the Bach Money protocol (devnet/testnet bootstrap, etc.)",
   "scripts": {
-    "bootstrap:devnet": "tsx bootstrap-devnet.ts",
-    "smoke:devnet": "tsx vault-smoke-devnet.ts",
-    "liquidation:devnet": "tsx liquidation-smoke-devnet.ts",
-    "setup-faucet:devnet": "tsx setup-faucet-devnet.ts"
+    "bootstrap:devnet": "CLUSTER=devnet tsx bootstrap.ts",
+    "bootstrap:testnet": "CLUSTER=testnet tsx bootstrap.ts",
+    "smoke:devnet": "CLUSTER=devnet tsx vault-smoke.ts",
+    "smoke:testnet": "CLUSTER=testnet tsx vault-smoke.ts",
+    "liquidation:devnet": "CLUSTER=devnet tsx liquidation-smoke.ts",
+    "liquidation:testnet": "CLUSTER=testnet tsx liquidation-smoke.ts",
+    "setup-faucet:devnet": "CLUSTER=devnet tsx setup-faucet.ts",
+    "setup-faucet:testnet": "CLUSTER=testnet tsx setup-faucet.ts"
   },
   "dependencies": {
     "@bach-money/sdk": "workspace:*",

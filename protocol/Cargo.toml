@@ -12,3 +12,12 @@ thiserror = "2.0.18"
 
 [lib]
 crate-type = ["cdylib", "lib"]
+
+[features]
+# GOVERNANCE_MINT is compiled to one network's BACH mint (see src/lib.rs).
+# Default targets devnet; build with --features testnet for the testnet mint.
+# These are mutually exclusive — do not enable more than one.
+default = ["devnet"]
+devnet = []
+testnet = []
+mainnet = []

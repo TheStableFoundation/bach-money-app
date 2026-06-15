@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NETWORK_LABEL } from "@/lib/solana/config";
 
 export default function Home() {
   return (
@@ -8,7 +9,7 @@ export default function Home() {
           Bach Money
         </span>
         <span className="label rounded-full border border-border px-2 py-0.5">
-          Devnet
+          {NETWORK_LABEL}
         </span>
       </header>
 

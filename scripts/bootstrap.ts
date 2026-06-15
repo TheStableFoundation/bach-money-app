@@ -1,5 +1,5 @@
 /**
- * Bach Money — devnet bootstrap
+ * Bach Money — protocol bootstrap (devnet / testnet)
  * -----------------------------------------------------------------------------
  * Brings a freshly deployed protocol program to a state where vaults can be
  * opened and toneUSD can be minted. It does, in order:
@@ -16,22 +16,18 @@
  * the account orderings mirror protocol/src/processor.rs exactly.
  *
  * Nothing here is destructive: every step is idempotent. Re-running skips work
- * that is already on-chain and reuses mints recorded in the output file.
+ * that is already on-chain and reuses mints recorded in the per-cluster output
+ * file (bootstrap-output.<cluster>.json).
  *
  * Run:   pnpm --filter @bach-money/scripts bootstrap:devnet
+ *        pnpm --filter @bach-money/scripts bootstrap:testnet
  *
- * Env overrides (all optional):
- *   RPC_URL          devnet RPC            (default: clusterApiUrl("devnet"))
- *   KEYPAIR_PATH     fee payer / authority (default: ~/.config/solana/main_0.json)
- *   PROGRAM_ID       deployed program id   (default: the devnet deployment)
- *   TONEUSD_MINT       reuse an existing toneUSD mint instead of creating one
- *   COLLATERAL_MINT  reuse an existing collateral mint instead of creating one
+ * Cluster + shared env overrides live in networks.ts. Bootstrap-specific ones:
+ *   TONEUSD_MINT        reuse an existing toneUSD mint instead of creating one
+ *   COLLATERAL_MINT     reuse an existing collateral mint instead of creating one
  *   INIT_PROTOCOL_ONLY  set to "1" to stop after InitializeProtocol (skip collateral)
  */
 
-import { homedir } from "node:os";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
 import {
   Connection,
   Keypair,
@@ -39,7 +35,6 @@ import {
   SystemProgram,
   Transaction,
   TransactionInstruction,
-  clusterApiUrl,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
 import {
@@ -48,21 +43,19 @@ import {
   getOrCreateAssociatedTokenAccount,
   mintTo,
 } from "@solana/spl-token";
+import {
+  resolveNetwork,
+  loadKeypair,
+  loadOutput,
+  saveOutput,
+  type BootstrapOutput,
+} from "./networks.ts";
 
 // --- configuration -----------------------------------------------------------
 
-const RPC_URL = process.env.RPC_URL ?? clusterApiUrl("devnet");
-const KEYPAIR_PATH =
-  process.env.KEYPAIR_PATH ?? join(homedir(), ".config", "solana", "main_0.json");
-const PROGRAM_ID = new PublicKey(
-  process.env.PROGRAM_ID ?? "yh9n52WPmWJBYTsBU1kBYfLSuxWY8zZTUPbjDB6d7wc",
-);
-
-// Devnet BACH governance mint (12 decimals). Must match GOVERNANCE_MINT in
-// protocol/src/lib.rs — the program checks this pubkey but never unpacks it.
-const GOVERNANCE_MINT = new PublicKey(
-  "DENNuKzCcrLhEtxZ8tm7nSeef8qvKgGGrdxX6euNkNS7",
-);
+const NET = resolveNetwork();
+const { cluster, rpcUrl, keypairPath, programId, governanceMint, outputFile } =
+  NET;
 
 // Seeds — must match protocol/src/lib.rs.
 const CONFIG_SEED = Buffer.from("config");
@@ -87,33 +80,11 @@ const COLLATERAL_DEBT_CEILING = 1_000_000_000_000n; // 1,000,000 toneUSD (6 deci
 const COLLATERAL_LIQ_RATIO_BPS = 15_000; // 150%
 const TEST_COLLATERAL_MINT_AMOUNT = 1_000n * 10n ** BigInt(COLLATERAL_DECIMALS); // 1000 tokens
 
-const OUTPUT_FILE = join(import.meta.dirname, "bootstrap-output.devnet.json");
-
 // Borsh enum tags (BachInstruction order in protocol/src/instruction.rs).
 const TAG_INITIALIZE_PROTOCOL = 0;
 const TAG_INITIALIZE_COLLATERAL = 1;
 
 // --- helpers -----------------------------------------------------------------
-
-type BootstrapOutput = {
-  toneUsdMint?: string;
-  collateralMint?: string;
-  collateralVault?: string;
-};
-
-function loadOutput(): BootstrapOutput {
-  if (!existsSync(OUTPUT_FILE)) return {};
-  return JSON.parse(readFileSync(OUTPUT_FILE, "utf8")) as BootstrapOutput;
-}
-
-function saveOutput(out: BootstrapOutput): void {
-  writeFileSync(OUTPUT_FILE, JSON.stringify(out, null, 2) + "\n");
-}
-
-function loadKeypair(path: string): Keypair {
-  const secret = JSON.parse(readFileSync(path, "utf8")) as number[];
-  return Keypair.fromSecretKey(Uint8Array.from(secret));
-}
 
 /** A program-owned account whose first byte (is_initialized) is non-zero. */
 async function isInitialized(
@@ -123,7 +94,7 @@ async function isInitialized(
   const info = await connection.getAccountInfo(pda);
   return (
     info !== null &&
-    info.owner.equals(PROGRAM_ID) &&
+    info.owner.equals(programId) &&
     info.data.length > 0 &&
     info.data[0] !== 0
   );
@@ -147,11 +118,11 @@ function buildInitializeProtocolIx(
   data.writeUInt16LE(MIN_COLLATERAL_RATIO_BPS, o);
 
   return new TransactionInstruction({
-    programId: PROGRAM_ID,
+    programId,
     keys: [
       { pubkey: payer, isSigner: true, isWritable: true },
       { pubkey: configPda, isSigner: false, isWritable: true },
-      { pubkey: GOVERNANCE_MINT, isSigner: false, isWritable: false },
+      { pubkey: governanceMint, isSigner: false, isWritable: false },
       { pubkey: toneUsdMint, isSigner: false, isWritable: false },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
@@ -174,7 +145,7 @@ function buildInitializeCollateralIx(
   data.writeUInt16LE(COLLATERAL_LIQ_RATIO_BPS, o);
 
   return new TransactionInstruction({
-    programId: PROGRAM_ID,
+    programId,
     keys: [
       { pubkey: payer, isSigner: true, isWritable: true },
       { pubkey: configPda, isSigner: false, isWritable: false },
@@ -190,15 +161,15 @@ function buildInitializeCollateralIx(
 // --- main --------------------------------------------------------------------
 
 async function main(): Promise<void> {
-  const connection = new Connection(RPC_URL, "confirmed");
-  const payer = loadKeypair(KEYPAIR_PATH);
-  const out = loadOutput();
+  const connection = new Connection(rpcUrl, "confirmed");
+  const payer = loadKeypair(keypairPath);
+  const out: BootstrapOutput = loadOutput(outputFile);
 
-  const [configPda] = PublicKey.findProgramAddressSync([CONFIG_SEED], PROGRAM_ID);
+  const [configPda] = PublicKey.findProgramAddressSync([CONFIG_SEED], programId);
 
-  console.log("Bach Money devnet bootstrap");
-  console.log("  RPC:        ", RPC_URL);
-  console.log("  Program:    ", PROGRAM_ID.toBase58());
+  console.log(`Bach Money ${cluster} bootstrap`);
+  console.log("  RPC:        ", rpcUrl);
+  console.log("  Program:    ", programId.toBase58());
   console.log("  Payer:      ", payer.publicKey.toBase58());
   console.log("  Config PDA: ", configPda.toBase58());
 
@@ -232,7 +203,7 @@ async function main(): Promise<void> {
         STABLE_MINT_DECIMALS,
       );
       out.toneUsdMint = toneUsdMint.toBase58();
-      saveOutput(out);
+      saveOutput(outputFile, out);
       console.log("    toneUSD mint:", toneUsdMint.toBase58());
     }
 
@@ -249,10 +220,10 @@ async function main(): Promise<void> {
 
   if (process.env.INIT_PROTOCOL_ONLY === "1") {
     console.log("\n✅ Protocol initialized (INIT_PROTOCOL_ONLY set — skipping collateral setup).\n");
-    console.log("  PROGRAM_ID  ", PROGRAM_ID.toBase58());
+    console.log("  PROGRAM_ID  ", programId.toBase58());
     console.log("  CONFIG_PDA  ", configPda.toBase58());
-    console.log("  toneUSD_MINT", toneUsdMint.toBase58());
-    console.log("  BACH_MINT   ", GOVERNANCE_MINT.toBase58());
+    console.log("  TONEUSD_MINT", toneUsdMint.toBase58());
+    console.log("  BACH_MINT   ", governanceMint.toBase58());
     return;
   }
 
@@ -274,13 +245,13 @@ async function main(): Promise<void> {
       COLLATERAL_DECIMALS,
     );
     out.collateralMint = collateralMint.toBase58();
-    saveOutput(out);
+    saveOutput(outputFile, out);
     console.log("    collateral mint:", collateralMint.toBase58());
   }
 
   const [collateralPda] = PublicKey.findProgramAddressSync(
     [COLLATERAL_SEED, collateralMint.toBuffer()],
-    PROGRAM_ID,
+    programId,
   );
 
   // --- 4: protocol-owned collateral vault (ATA owned by the config PDA) ------
@@ -294,7 +265,7 @@ async function main(): Promise<void> {
   );
   const collateralVault = vaultAccount.address;
   out.collateralVault = collateralVault.toBase58();
-  saveOutput(out);
+  saveOutput(outputFile, out);
   console.log("    collateral vault:", collateralVault.toBase58());
 
   // --- 5: InitializeCollateral ----------------------------------------------
@@ -339,14 +310,20 @@ async function main(): Promise<void> {
   console.log("    minted:", TEST_COLLATERAL_MINT_AMOUNT.toString(), "base units");
 
   // --- summary ---------------------------------------------------------------
-  console.log("\n✅ Bootstrap complete.\n");
-  console.log("  PROGRAM_ID      ", PROGRAM_ID.toBase58());
+  console.log(`\n✅ Bootstrap complete (${cluster}).\n`);
+  console.log("  PROGRAM_ID      ", programId.toBase58());
   console.log("  CONFIG_PDA      ", configPda.toBase58());
-  console.log("  TONEUSD_MINT      ", toneUsdMint.toBase58());
+  console.log("  TONEUSD_MINT    ", toneUsdMint.toBase58());
   console.log("  COLLATERAL_MINT ", collateralMint.toBase58());
   console.log("  COLLATERAL_PDA  ", collateralPda.toBase58());
   console.log("  COLLATERAL_VAULT", collateralVault.toBase58());
   console.log("  TOKEN_PROGRAM   ", TOKEN_PROGRAM_ID.toBase58());
+  console.log(
+    `\nFrontend: set NEXT_PUBLIC_SOLANA_CLUSTER=${cluster}` +
+      (cluster === "testnet"
+        ? " plus NEXT_PUBLIC_TONEUSD_MINT / NEXT_PUBLIC_COLLATERAL_MINT to the mints above."
+        : "."),
+  );
   console.log("\nNext: openVault -> depositCollateral -> mintStablecoin (via @bach-money/sdk).");
 }
 

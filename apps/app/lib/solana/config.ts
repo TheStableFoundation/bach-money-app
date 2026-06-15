@@ -3,42 +3,110 @@ import { PublicKey, clusterApiUrl, type Cluster } from "@solana/web3.js";
 /**
  * Single source of truth for on-chain configuration.
  *
- * DEVNET ONLY. Do not point this at mainnet without a deliberate, reviewed
- * change — the program, mints, and collateral market below are all devnet.
+ * The active cluster is chosen at build time by NEXT_PUBLIC_SOLANA_CLUSTER
+ * ("devnet" or "testnet") and defaults to devnet. Mainnet is intentionally not
+ * wired up — do not add it without a deliberate, reviewed change.
+ *
+ * The program id is the same across clusters (the program is deployed from one
+ * program keypair). The toneUSD and collateral mints are created per cluster by
+ * scripts/bootstrap.ts, so the testnet mints come from env until pinned here.
  */
 
-export const CLUSTER: Cluster = "devnet";
+type SupportedCluster = Extract<Cluster, "devnet" | "testnet">;
+
+function resolveCluster(): SupportedCluster {
+  const raw = process.env.NEXT_PUBLIC_SOLANA_CLUSTER?.trim().toLowerCase();
+  if (raw === "testnet") return "testnet";
+  if (raw && raw !== "devnet") {
+    throw new Error(
+      `Unsupported NEXT_PUBLIC_SOLANA_CLUSTER "${raw}" — use "devnet" or "testnet".`,
+    );
+  }
+  return "devnet";
+}
+
+export const CLUSTER: SupportedCluster = resolveCluster();
+
+/** Capitalized cluster name for UI badges and copy. */
+export const NETWORK_LABEL = CLUSTER === "testnet" ? "Testnet" : "Devnet";
+
+type NetworkConfig = {
+  programId: string;
+  toneUsdMint: string;
+  bachMint: string;
+  collateralMint: string;
+};
+
+// Same program keypair on every cluster, so one program id.
+const PROGRAM_ID_ADDRESS = "yh9n52WPmWJBYTsBU1kBYfLSuxWY8zZTUPbjDB6d7wc";
+
+const DEFAULTS: Record<SupportedCluster, NetworkConfig> = {
+  devnet: {
+    programId: PROGRAM_ID_ADDRESS,
+    // toneUSD stablecoin mint — 6 decimals, mint authority = config PDA.
+    toneUsdMint: "B4wtMQyvYaY9bDNTnBY3sRczqRUp3zW8P7CaFqLVCb5f",
+    // BACH governance mint — must match GOVERNANCE_MINT in protocol/src/lib.rs.
+    bachMint: "DENNuKzCcrLhEtxZ8tm7nSeef8qvKgGGrdxX6euNkNS7",
+    // Test collateral mint created by scripts/bootstrap.ts (CLUSTER=devnet).
+    collateralMint: "HjsxowJNtQoy2fEzdRqdYaWf7nNpDQumTG7k61RYmnrg",
+  },
+  testnet: {
+    programId: PROGRAM_ID_ADDRESS,
+    // toneUSD + test collateral created by `bootstrap:testnet`. Override with
+    // NEXT_PUBLIC_TONEUSD_MINT / NEXT_PUBLIC_COLLATERAL_MINT if re-bootstrapped.
+    toneUsdMint: "52fQM2Hges4SE3mrkuxD1AXWq7h4nh2NQ19VLdfkFLz",
+    // testnet BACH mint — pairs with the program built `--features testnet`.
+    bachMint: "A6a2s9LTZcYZQgxrDatLHYfvHhJEfb5ZWuFENhHtxJtR",
+    collateralMint: "ufWWrjjx5ET1qbjU25Zncgco3CiBa4U9XyGaMbQsB7Q",
+  },
+};
+
+/** Active cluster's addresses, with per-env overrides taking precedence. */
+const NET: NetworkConfig = {
+  programId:
+    process.env.NEXT_PUBLIC_PROGRAM_ID?.trim() || DEFAULTS[CLUSTER].programId,
+  toneUsdMint:
+    process.env.NEXT_PUBLIC_TONEUSD_MINT?.trim() ||
+    DEFAULTS[CLUSTER].toneUsdMint,
+  bachMint:
+    process.env.NEXT_PUBLIC_BACH_MINT?.trim() || DEFAULTS[CLUSTER].bachMint,
+  collateralMint:
+    process.env.NEXT_PUBLIC_COLLATERAL_MINT?.trim() ||
+    DEFAULTS[CLUSTER].collateralMint,
+};
+
+function pk(address: string, name: string): PublicKey {
+  if (!address) {
+    throw new Error(
+      `Missing ${name} for cluster "${CLUSTER}". Set the matching ` +
+        `NEXT_PUBLIC_* env var (the bootstrap script prints these).`,
+    );
+  }
+  return new PublicKey(address);
+}
 
 /**
- * RPC endpoint. The public devnet RPC is heavily rate-limited; for anything
- * beyond light testing set NEXT_PUBLIC_SOLANA_RPC_URL to a private devnet URL
- * from Helius / Triton / QuickNode.
+ * RPC endpoint. The public cluster RPCs are heavily rate-limited; for anything
+ * beyond light testing set NEXT_PUBLIC_SOLANA_RPC_URL to a private endpoint for
+ * the active cluster (Helius / Triton / QuickNode).
  */
 export const RPC_ENDPOINT =
   process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim() || clusterApiUrl(CLUSTER);
 
-/** Deployed Bach Money program (devnet). */
-export const PROGRAM_ID = new PublicKey(
-  "yh9n52WPmWJBYTsBU1kBYfLSuxWY8zZTUPbjDB6d7wc",
-);
+/** Deployed Bach Money program. */
+export const PROGRAM_ID = pk(NET.programId, "PROGRAM_ID");
 
-/** toneUSD stablecoin mint (devnet) — 6 decimals, mint authority = config PDA. */
-export const TONEUSD_MINT = new PublicKey(
-  "B4wtMQyvYaY9bDNTnBY3sRczqRUp3zW8P7CaFqLVCb5f",
-);
+/** toneUSD stablecoin mint — 6 decimals, mint authority = config PDA. */
+export const TONEUSD_MINT = pk(NET.toneUsdMint, "TONEUSD_MINT");
 
-/** BACH governance mint (devnet) — 12 decimals. */
-export const BACH_MINT = new PublicKey(
-  "DENNuKzCcrLhEtxZ8tm7nSeef8qvKgGGrdxX6euNkNS7",
-);
+/** BACH governance mint — 12 decimals. */
+export const BACH_MINT = pk(NET.bachMint, "BACH_MINT");
 
 /**
- * Active collateral market (devnet). This is a TEST collateral mint created by
- * scripts/bootstrap-devnet.ts; replace when a real collateral market is added.
+ * Active collateral market. This is a TEST collateral mint created by
+ * scripts/bootstrap.ts; replace when a real collateral market is added.
  */
-export const COLLATERAL_MINT = new PublicKey(
-  "HjsxowJNtQoy2fEzdRqdYaWf7nNpDQumTG7k61RYmnrg",
-);
+export const COLLATERAL_MINT = pk(NET.collateralMint, "COLLATERAL_MINT");
 
 export type TokenInfo = {
   mint: PublicKey;
