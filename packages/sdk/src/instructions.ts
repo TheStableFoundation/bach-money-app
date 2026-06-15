@@ -254,8 +254,8 @@ export function liquidateVault(
       { pubkey: accounts.vaultPda, isSigner: false, isWritable: true },
       { pubkey: accounts.stableMint, isSigner: false, isWritable: true },
       { pubkey: accounts.liquidatorStableAta, isSigner: false, isWritable: true },
-      { pubkey: accounts.collateralVault, isSigner: false, isWritable: true },
       { pubkey: accounts.liquidatorCollateralAta, isSigner: false, isWritable: true },
+      { pubkey: accounts.collateralVault, isSigner: false, isWritable: true },
       { pubkey: accounts.tokenProgram, isSigner: false, isWritable: false },
     ],
     data: Buffer.from(buf),
@@ -281,6 +281,88 @@ export function updateOraclePrice(
       { pubkey: accounts.oracleAuthority, isSigner: true, isWritable: false },
       { pubkey: accounts.configPda, isSigner: false, isWritable: false },
       { pubkey: accounts.collateralConfigPda, isSigner: false, isWritable: true },
+    ],
+    data: Buffer.from(buf),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Admin / bootstrap instructions
+// ---------------------------------------------------------------------------
+
+export interface InitializeProtocolAccounts {
+  payer: PublicKey;
+  configPda: PublicKey;
+  governanceMint: PublicKey;
+  stableMint: PublicKey;
+  programId: PublicKey;
+}
+
+export interface InitializeProtocolParams {
+  governanceAuthority: PublicKey;
+  oracleAuthority: PublicKey;
+  stabilityFeeBps: number;
+  liquidationRatioBps: number;
+  liquidationPenaltyBps: number;
+  minCollateralRatioBps: number;
+}
+
+export function initializeProtocol(
+  accounts: InitializeProtocolAccounts,
+  params: InitializeProtocolParams,
+): TransactionInstruction {
+  const buf: number[] = [Tag.InitializeProtocol];
+  writePubkey(buf, params.governanceAuthority);
+  writePubkey(buf, params.oracleAuthority);
+  writeU16LE(buf, params.stabilityFeeBps);
+  writeU16LE(buf, params.liquidationRatioBps);
+  writeU16LE(buf, params.liquidationPenaltyBps);
+  writeU16LE(buf, params.minCollateralRatioBps);
+  return new TransactionInstruction({
+    programId: accounts.programId,
+    keys: [
+      { pubkey: accounts.payer, isSigner: true, isWritable: true },
+      { pubkey: accounts.configPda, isSigner: false, isWritable: true },
+      { pubkey: accounts.governanceMint, isSigner: false, isWritable: false },
+      { pubkey: accounts.stableMint, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    data: Buffer.from(buf),
+  });
+}
+
+export interface InitializeCollateralAccounts {
+  payer: PublicKey;
+  configPda: PublicKey;
+  collateralPda: PublicKey;
+  collateralMint: PublicKey;
+  collateralVault: PublicKey;
+  programId: PublicKey;
+}
+
+export interface InitializeCollateralParams {
+  priceE6: bigint;
+  debtCeiling: bigint;
+  liquidationRatioBps: number;
+}
+
+export function initializeCollateral(
+  accounts: InitializeCollateralAccounts,
+  params: InitializeCollateralParams,
+): TransactionInstruction {
+  const buf: number[] = [Tag.InitializeCollateral];
+  writeU64LE(buf, params.priceE6);
+  writeU64LE(buf, params.debtCeiling);
+  writeU16LE(buf, params.liquidationRatioBps);
+  return new TransactionInstruction({
+    programId: accounts.programId,
+    keys: [
+      { pubkey: accounts.payer, isSigner: true, isWritable: true },
+      { pubkey: accounts.configPda, isSigner: false, isWritable: false },
+      { pubkey: accounts.collateralPda, isSigner: false, isWritable: true },
+      { pubkey: accounts.collateralMint, isSigner: false, isWritable: false },
+      { pubkey: accounts.collateralVault, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
     data: Buffer.from(buf),
   });
