@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Providers } from "./providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Bach Money | A decentralized stablecoin platform",
-  description: "A decentralized stablecoin platform governed by the community of deflationary €BACH token holders. Built on Solana.",
+  title: "Bach Money | toneUSD on Solana",
+  description:
+    "Mint toneUSD, an over-collateralized stablecoin, against your collateral. Governed by €BACH holders. Built on Solana.",
 };
 
 export default function RootLayout({
@@ -27,7 +29,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

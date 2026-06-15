@@ -10,6 +10,12 @@ node_modules
 
 # testing
 coverage
+test-results
+playwright-report
+playwright/.cache
+
+# storybook
+storybook-static
 
 # next.js
 .next/
@@ -38,6 +44,9 @@ yarn-error.log*
 
 # env files
 .env*
+
+# bootstrap script output (generated devnet/testnet state)
+scripts/bootstrap-output.*.json
 
 # vercel
 .vercel
