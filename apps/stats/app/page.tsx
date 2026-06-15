@@ -7,7 +7,7 @@ export default function Home() {
         <h1 className="text-4xl sm:text-5xl font-bold text-center sm:text-left">
           <a
             className="text-primary"
-            href="https://bachmoney-stats.5mb.app"
+            href="https://stats.bach.money"
             title="The Bach Money statistics - numbers and metrics."
           >
             Bach Money Stats

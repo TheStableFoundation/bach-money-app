@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
@@ -13,15 +14,8 @@ import {
   type ProtocolConfig,
   type VaultPosition,
 } from "@bach-money/sdk";
-import {
-  PROGRAM_ID,
-  COLLATERAL_MINT,
-  TOKENS,
-  NETWORK_LABEL,
-  explorerAddress,
-  explorerTx,
-  shortAddress,
-} from "@/lib/solana/config";
+import { shortAddress, type TokenInfo } from "@/lib/solana/config";
+import { useNetwork } from "@/lib/solana/network";
 import {
   formatToken,
   formatUnits,
@@ -30,7 +24,9 @@ import {
   isValidAmount,
 } from "@/lib/format/token";
 import { WalletButton } from "@/components/WalletButton";
+import { NetworkSwitcher } from "@/components/NetworkSwitcher";
 import { FaucetButton } from "@/components/FaucetButton";
+import { SiteFooter } from "@/components/SiteFooter";
 import {
   buildOpenVaultTx,
   buildDepositTx,
@@ -52,10 +48,12 @@ const POW10 = (d: number) => 10n ** BigInt(d);
 export function VaultDashboard() {
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
+  const { network } = useNetwork();
+  const TOKENS = network.tokens;
 
   const client = useMemo(
-    () => new BachMoneyClient(connection, PROGRAM_ID),
-    [connection],
+    () => new BachMoneyClient(connection, network.programId),
+    [connection, network.programId],
   );
 
   const [config, setConfig] = useState<ProtocolConfig | null>(null);
@@ -73,15 +71,15 @@ export function VaultDashboard() {
     try {
       const [cfg, mkt] = await Promise.all([
         client.fetchProtocolConfig(),
-        client.fetchCollateralConfig(COLLATERAL_MINT),
+        client.fetchCollateralConfig(network.collateralMint),
       ]);
       setConfig(cfg);
       setMarket(mkt);
 
       if (publicKey) {
         const [vlt, bal] = await Promise.all([
-          client.fetchVaultPosition(publicKey, COLLATERAL_MINT),
-          loadBalances(connection, publicKey),
+          client.fetchVaultPosition(publicKey, network.collateralMint),
+          loadBalances(connection, publicKey, TOKENS),
         ]);
         setVault(vlt);
         setBalances(bal);
@@ -94,7 +92,7 @@ export function VaultDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [client, connection, publicKey]);
+  }, [client, connection, publicKey, network.collateralMint, TOKENS]);
 
   useEffect(() => {
     void refresh();
@@ -127,17 +125,17 @@ export function VaultDashboard() {
   return (
     <div className="min-h-screen">
       <Header />
-      <main className="mx-auto max-w-5xl px-6 pb-24 pt-10 sm:px-8">
+      <main className="mx-auto max-w-5xl px-6 pb-16 pt-10 sm:px-8">
         <h1 className="text-2xl font-semibold tracking-tight">Vault</h1>
         <p className="mt-1 text-sm text-muted">
-          Lock collateral and mint toneUSD on Solana {NETWORK_LABEL.toLowerCase()}.
+          Lock collateral and mint toneUSD on Solana {network.label.toLowerCase()}.
         </p>
 
         {error && (
           <Banner kind="error">
             Could not read the protocol: {error}. The public{" "}
-            {NETWORK_LABEL.toLowerCase()} RPC is rate-limited; set
-            NEXT_PUBLIC_SOLANA_RPC_URL to a private endpoint.
+            {network.label.toLowerCase()} RPC is rate-limited; set a private
+            endpoint via NEXT_PUBLIC_SOLANA_RPC_URL_{network.cluster.toUpperCase()}.
           </Banner>
         )}
 
@@ -167,7 +165,7 @@ export function VaultDashboard() {
               owner={publicKey}
               onRefresh={refresh}
               onOpen={() =>
-                run("open", () => buildOpenVaultTx(publicKey))
+                run("open", () => buildOpenVaultTx(network, publicKey))
               }
               onAction={(action, amount) => {
                 if (!market) return;
@@ -178,22 +176,26 @@ export function VaultDashboard() {
                 const base = parseUnits(amount, dec);
                 if (action === "deposit")
                   return run("deposit", () =>
-                    buildDepositTx(publicKey, market.collateralVault, base),
+                    buildDepositTx(network, publicKey, market.collateralVault, base),
                   );
                 if (action === "withdraw")
                   return run("withdraw", () =>
-                    buildWithdrawTx(publicKey, market.collateralVault, base),
+                    buildWithdrawTx(network, publicKey, market.collateralVault, base),
                   );
                 if (action === "mint")
                   return run("mint", () =>
-                    buildMintTx(connection, publicKey, base),
+                    buildMintTx(network, connection, publicKey, base),
                   );
-                return run("repay", () => buildBurnTx(publicKey, base));
+                return run("repay", () => buildBurnTx(network, publicKey, base));
               }}
             />
           )}
         </div>
       </main>
+
+      <div className="mx-auto max-w-5xl px-6 pb-12 sm:px-8">
+        <SiteFooter />
+      </div>
     </div>
   );
 }
@@ -207,12 +209,13 @@ function Header() {
     <header className="border-b border-border">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
         <div className="flex items-center gap-3">
-          <span className="text-base font-semibold tracking-tight">
+          <Link
+            href="/"
+            className="text-base font-semibold tracking-tight transition-colors hover:text-accent-ink"
+          >
             Bach Money
-          </span>
-          <span className="label rounded-full border border-border px-2 py-0.5">
-            {NETWORK_LABEL}
-          </span>
+          </Link>
+          <NetworkSwitcher />
         </div>
         <WalletButton />
       </div>
@@ -275,6 +278,7 @@ function MarketCard({
   market: CollateralConfig | null;
   loading: boolean;
 }) {
+  const TOKENS = useNetwork().network.tokens;
   const utilization =
     market && market.debtCeiling > 0n
       ? Number((market.totalDebt * 10000n) / market.debtCeiling) / 100
@@ -346,6 +350,8 @@ function VaultPanel({
   onOpen: () => void;
   onAction: (action: Action, amount: string) => void;
 }) {
+  const { network } = useNetwork();
+  const TOKENS = network.tokens;
   if (!market || !config) {
     return (
       <Card title="Your position">
@@ -382,7 +388,11 @@ function VaultPanel({
         aside={
           <div className="flex items-center gap-4">
             <Balances balances={balances} />
-            <FaucetButton owner={owner} onDone={onRefresh} />
+            <FaucetButton
+              owner={owner}
+              cluster={network.cluster}
+              onDone={onRefresh}
+            />
           </div>
         }
       >
@@ -448,6 +458,7 @@ function VaultPanel({
 }
 
 function Balances({ balances }: { balances: Balances | null }) {
+  const TOKENS = useNetwork().network.tokens;
   if (!balances) return null;
   return (
     <div className="flex gap-4 text-right">
@@ -492,6 +503,9 @@ function ActionCard({
   available: bigint;
   onAction: (action: Action, amount: string) => void;
 }) {
+  const { network } = useNetwork();
+  const TOKENS = network.tokens;
+  const { explorerTx } = network;
   const [action, setAction] = useState<Action>("deposit");
   const [amount, setAmount] = useState("");
 
@@ -726,6 +740,7 @@ function Button({
 }
 
 function AddressLink({ address }: { address: PublicKey }) {
+  const { explorerAddress } = useNetwork().network;
   return (
     <a
       className="mono text-sm font-normal text-accent hover:underline"
@@ -761,11 +776,12 @@ function Banner({
 }
 
 function ConnectPrompt() {
+  const { network } = useNetwork();
   return (
     <Card title="Your position">
       <div className="flex flex-col items-start gap-4 py-2">
         <p className="text-sm text-muted">
-          Connect a Solana wallet (set to {NETWORK_LABEL.toLowerCase()}) to open
+          Connect a Solana wallet (set to {network.label.toLowerCase()}) to open
           a vault and mint toneUSD.
         </p>
         <WalletButton />
@@ -795,11 +811,12 @@ function Skeleton({ rows }: { rows: number }) {
 async function loadBalances(
   connection: import("@solana/web3.js").Connection,
   owner: PublicKey,
+  tokens: { toneUSD: TokenInfo; collateral: TokenInfo },
 ): Promise<Balances> {
   const sol = BigInt(await connection.getBalance(owner));
   const [toneUSD, collateral] = await Promise.all([
-    tokenBalance(connection, owner, TOKENS.toneUSD.mint),
-    tokenBalance(connection, owner, TOKENS.collateral.mint),
+    tokenBalance(connection, owner, tokens.toneUSD.mint),
+    tokenBalance(connection, owner, tokens.collateral.mint),
   ]);
   return { sol, toneUSD, collateral };
 }

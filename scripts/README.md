@@ -95,14 +95,28 @@ pnpm --filter @bach-money/scripts setup-faucet:testnet
 
 ## Wiring the frontend
 
-The app picks its cluster from `NEXT_PUBLIC_SOLANA_CLUSTER` (`devnet` by
-default). Devnet addresses are baked into `apps/app/lib/solana/config.ts`. For
-testnet, set the mints bootstrap printed:
+Both clusters are baked into `apps/app/lib/solana/config.ts`, and the user
+switches between them at runtime with the network selector in the header (the
+choice is saved to `localStorage`). `NEXT_PUBLIC_SOLANA_CLUSTER` only sets the
+cluster shown on first load (defaults to `devnet`).
+
+Everything else is optional and per-cluster:
 
 ```dotenv
-NEXT_PUBLIC_SOLANA_CLUSTER=testnet
-NEXT_PUBLIC_TONEUSD_MINT=<toneUSD mint from bootstrap:testnet>
-NEXT_PUBLIC_COLLATERAL_MINT=<collateral mint from bootstrap:testnet>
-NEXT_PUBLIC_SOLANA_RPC_URL=<private testnet RPC>   # optional but recommended
-FAUCET_SECRET_KEY=<from setup-faucet:testnet>
+# default cluster on first visit (devnet | testnet)
+NEXT_PUBLIC_SOLANA_CLUSTER=devnet
+
+# private RPCs — strongly recommended, the public ones are rate-limited
+NEXT_PUBLIC_SOLANA_RPC_URL_DEVNET=<private devnet RPC>
+NEXT_PUBLIC_SOLANA_RPC_URL_TESTNET=<private testnet RPC>
+
+# faucet authorities, one per cluster (from setup-faucet:<cluster>)
+FAUCET_SECRET_KEY_DEVNET=<from setup-faucet:devnet>
+FAUCET_SECRET_KEY_TESTNET=<from setup-faucet:testnet>
+
+# only if a cluster is re-bootstrapped with fresh mints
+NEXT_PUBLIC_TONEUSD_MINT=<testnet toneUSD mint>
+NEXT_PUBLIC_COLLATERAL_MINT=<testnet collateral mint>
 ```
+
+`FAUCET_SECRET_KEY` (no suffix) still works as the devnet key for back-compat.

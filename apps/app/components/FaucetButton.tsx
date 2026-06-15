@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import type { PublicKey } from "@solana/web3.js";
+import type { Cluster } from "@/lib/solana/config";
 
 export function FaucetButton({
   owner,
+  cluster,
   onDone,
 }: {
   owner: PublicKey;
+  cluster: Cluster;
   onDone: () => void | Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
@@ -20,7 +23,7 @@ export function FaucetButton({
       const res = await fetch("/api/faucet", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ owner: owner.toBase58() }),
+        body: JSON.stringify({ owner: owner.toBase58(), cluster }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? "faucet request failed");

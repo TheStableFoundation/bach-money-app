@@ -1,36 +1,42 @@
-import { PublicKey, clusterApiUrl, type Cluster } from "@solana/web3.js";
+import { PublicKey, clusterApiUrl, type Cluster as Web3Cluster } from "@solana/web3.js";
 
 /**
- * Single source of truth for on-chain configuration.
+ * Network registry — the single source of truth for on-chain configuration.
  *
- * The active cluster is chosen at build time by NEXT_PUBLIC_SOLANA_CLUSTER
- * ("devnet" or "testnet") and defaults to devnet. Mainnet is intentionally not
- * wired up — do not add it without a deliberate, reviewed change.
- *
- * The program id is the same across clusters (the program is deployed from one
- * program keypair). The toneUSD and collateral mints are created per cluster by
- * scripts/bootstrap.ts, so the testnet mints come from env until pinned here.
+ * Both devnet and testnet are first-class; the active one is chosen at runtime
+ * (see lib/solana/network.tsx) so an end-user can switch between them. This
+ * module stays a pure, framework-free resolver: `getNetwork(cluster)` works on
+ * the server (the faucet route) and on the client alike. Mainnet is
+ * intentionally not wired up.
  */
 
-type SupportedCluster = Extract<Cluster, "devnet" | "testnet">;
+export type Cluster = Extract<Web3Cluster, "devnet" | "testnet">;
 
-function resolveCluster(): SupportedCluster {
-  const raw = process.env.NEXT_PUBLIC_SOLANA_CLUSTER?.trim().toLowerCase();
-  if (raw === "testnet") return "testnet";
-  if (raw && raw !== "devnet") {
-    throw new Error(
-      `Unsupported NEXT_PUBLIC_SOLANA_CLUSTER "${raw}" — use "devnet" or "testnet".`,
-    );
-  }
-  return "devnet";
+export const SUPPORTED_CLUSTERS: readonly Cluster[] = ["devnet", "testnet"];
+
+export function isCluster(x: unknown): x is Cluster {
+  return x === "devnet" || x === "testnet";
 }
 
-export const CLUSTER: SupportedCluster = resolveCluster();
+export function clusterLabel(cluster: Cluster): string {
+  return cluster === "testnet" ? "Testnet" : "Devnet";
+}
 
-/** Capitalized cluster name for UI badges and copy. */
-export const NETWORK_LABEL = CLUSTER === "testnet" ? "Testnet" : "Devnet";
+/** Cluster shown on first load, before the user picks one. */
+export const DEFAULT_CLUSTER: Cluster = isCluster(
+  process.env.NEXT_PUBLIC_SOLANA_CLUSTER?.trim().toLowerCase(),
+)
+  ? (process.env.NEXT_PUBLIC_SOLANA_CLUSTER!.trim().toLowerCase() as Cluster)
+  : "devnet";
 
-type NetworkConfig = {
+export type TokenInfo = {
+  mint: PublicKey;
+  symbol: string;
+  label: string;
+  decimals: number;
+};
+
+type NetworkAddresses = {
   programId: string;
   toneUsdMint: string;
   bachMint: string;
@@ -40,120 +46,103 @@ type NetworkConfig = {
 // Same program keypair on every cluster, so one program id.
 const PROGRAM_ID_ADDRESS = "yh9n52WPmWJBYTsBU1kBYfLSuxWY8zZTUPbjDB6d7wc";
 
-const DEFAULTS: Record<SupportedCluster, NetworkConfig> = {
+// NOTE: Next.js inlines NEXT_PUBLIC_* only via *literal* property access. Never
+// index process.env dynamically here or the values vanish from the client bundle.
+const ADDRESSES: Record<Cluster, NetworkAddresses> = {
   devnet: {
     programId: PROGRAM_ID_ADDRESS,
-    // toneUSD stablecoin mint — 6 decimals, mint authority = config PDA.
     toneUsdMint: "B4wtMQyvYaY9bDNTnBY3sRczqRUp3zW8P7CaFqLVCb5f",
-    // BACH governance mint — must match GOVERNANCE_MINT in protocol/src/lib.rs.
     bachMint: "DENNuKzCcrLhEtxZ8tm7nSeef8qvKgGGrdxX6euNkNS7",
-    // Test collateral mint created by scripts/bootstrap.ts (CLUSTER=devnet).
     collateralMint: "HjsxowJNtQoy2fEzdRqdYaWf7nNpDQumTG7k61RYmnrg",
   },
   testnet: {
     programId: PROGRAM_ID_ADDRESS,
-    // toneUSD + test collateral created by `bootstrap:testnet`. Override with
-    // NEXT_PUBLIC_TONEUSD_MINT / NEXT_PUBLIC_COLLATERAL_MINT if re-bootstrapped.
-    toneUsdMint: "52fQM2Hges4SE3mrkuxD1AXWq7h4nh2NQ19VLdfkFLz",
+    // Created by `bootstrap:testnet`; override if the market is re-bootstrapped.
+    toneUsdMint:
+      process.env.NEXT_PUBLIC_TONEUSD_MINT?.trim() ||
+      "52fQM2Hges4SE3mrkuxD1AXWq7h4nh2NQ19VLdfkFLz",
     // testnet BACH mint — pairs with the program built `--features testnet`.
     bachMint: "A6a2s9LTZcYZQgxrDatLHYfvHhJEfb5ZWuFENhHtxJtR",
-    collateralMint: "ufWWrjjx5ET1qbjU25Zncgco3CiBa4U9XyGaMbQsB7Q",
+    collateralMint:
+      process.env.NEXT_PUBLIC_COLLATERAL_MINT?.trim() ||
+      "ufWWrjjx5ET1qbjU25Zncgco3CiBa4U9XyGaMbQsB7Q",
   },
 };
 
-/** Active cluster's addresses, with per-env overrides taking precedence. */
-const NET: NetworkConfig = {
-  programId:
-    process.env.NEXT_PUBLIC_PROGRAM_ID?.trim() || DEFAULTS[CLUSTER].programId,
-  toneUsdMint:
-    process.env.NEXT_PUBLIC_TONEUSD_MINT?.trim() ||
-    DEFAULTS[CLUSTER].toneUsdMint,
-  bachMint:
-    process.env.NEXT_PUBLIC_BACH_MINT?.trim() || DEFAULTS[CLUSTER].bachMint,
-  collateralMint:
-    process.env.NEXT_PUBLIC_COLLATERAL_MINT?.trim() ||
-    DEFAULTS[CLUSTER].collateralMint,
+const RPC_OVERRIDES: Record<Cluster, string | undefined> = {
+  devnet: process.env.NEXT_PUBLIC_SOLANA_RPC_URL_DEVNET?.trim() || undefined,
+  testnet: process.env.NEXT_PUBLIC_SOLANA_RPC_URL_TESTNET?.trim() || undefined,
 };
 
-function pk(address: string, name: string): PublicKey {
-  if (!address) {
-    throw new Error(
-      `Missing ${name} for cluster "${CLUSTER}". Set the matching ` +
-        `NEXT_PUBLIC_* env var (the bootstrap script prints these).`,
-    );
-  }
-  return new PublicKey(address);
+// Legacy single override; applies to the default cluster only.
+const LEGACY_RPC = process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim() || undefined;
+
+function rpcFor(cluster: Cluster): string {
+  return (
+    RPC_OVERRIDES[cluster] ||
+    (cluster === DEFAULT_CLUSTER ? LEGACY_RPC : undefined) ||
+    clusterApiUrl(cluster)
+  );
 }
 
-/**
- * RPC endpoint. The public cluster RPCs are heavily rate-limited; for anything
- * beyond light testing set NEXT_PUBLIC_SOLANA_RPC_URL to a private endpoint for
- * the active cluster (Helius / Triton / QuickNode).
- */
-export const RPC_ENDPOINT =
-  process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim() || clusterApiUrl(CLUSTER);
-
-/** Deployed Bach Money program. */
-export const PROGRAM_ID = pk(NET.programId, "PROGRAM_ID");
-
-/** toneUSD stablecoin mint — 6 decimals, mint authority = config PDA. */
-export const TONEUSD_MINT = pk(NET.toneUsdMint, "TONEUSD_MINT");
-
-/** BACH governance mint — 12 decimals. */
-export const BACH_MINT = pk(NET.bachMint, "BACH_MINT");
-
-/**
- * Active collateral market. This is a TEST collateral mint created by
- * scripts/bootstrap.ts; replace when a real collateral market is added.
- */
-export const COLLATERAL_MINT = pk(NET.collateralMint, "COLLATERAL_MINT");
-
-export type TokenInfo = {
-  mint: PublicKey;
-  symbol: string;
+export type ResolvedNetwork = {
+  cluster: Cluster;
   label: string;
-  decimals: number;
+  rpcEndpoint: string;
+  programId: PublicKey;
+  toneUsdMint: PublicKey;
+  bachMint: PublicKey;
+  collateralMint: PublicKey;
+  /**
+   * Token registry. `decimals` lives here only — components must never hardcode
+   * decimal constants; route every amount through lib/format/token.ts instead.
+   */
+  tokens: { toneUSD: TokenInfo; BACH: TokenInfo; collateral: TokenInfo };
+  explorerAddress: (address: PublicKey | string) => string;
+  explorerTx: (signature: string) => string;
 };
 
-/**
- * Token registry. `decimals` lives here only — components must never hardcode
- * decimal constants; route every amount through lib/format/token.ts instead.
- */
-export const TOKENS = {
-  toneUSD: {
-    mint: TONEUSD_MINT,
-    symbol: "toneUSD",
-    label: "toneUSD",
-    decimals: 6,
-  },
-  BACH: {
-    mint: BACH_MINT,
-    symbol: "BACH",
-    label: "BACH",
-    decimals: 12,
-  },
-  collateral: {
-    mint: COLLATERAL_MINT,
-    symbol: "tCOLL",
-    label: "Test collateral",
-    decimals: 9,
-  },
-} satisfies Record<string, TokenInfo>;
+const EXPLORER = "https://explorer.solana.com";
+
+const cache = new Map<Cluster, ResolvedNetwork>();
+
+/** Resolve a cluster to its addresses, RPC, tokens, and explorer links. Memoized. */
+export function getNetwork(cluster: Cluster): ResolvedNetwork {
+  const cached = cache.get(cluster);
+  if (cached) return cached;
+
+  const a = ADDRESSES[cluster];
+  const programId = new PublicKey(a.programId);
+  const toneUsdMint = new PublicKey(a.toneUsdMint);
+  const bachMint = new PublicKey(a.bachMint);
+  const collateralMint = new PublicKey(a.collateralMint);
+  const suffix = `?cluster=${cluster}`;
+
+  const net: ResolvedNetwork = {
+    cluster,
+    label: clusterLabel(cluster),
+    rpcEndpoint: rpcFor(cluster),
+    programId,
+    toneUsdMint,
+    bachMint,
+    collateralMint,
+    tokens: {
+      toneUSD: { mint: toneUsdMint, symbol: "toneUSD", label: "toneUSD", decimals: 6 },
+      BACH: { mint: bachMint, symbol: "BACH", label: "BACH", decimals: 12 },
+      collateral: { mint: collateralMint, symbol: "tCOLL", label: "Test collateral", decimals: 9 },
+    },
+    explorerAddress: (address) => {
+      const x = typeof address === "string" ? address : address.toBase58();
+      return `${EXPLORER}/address/${x}${suffix}`;
+    },
+    explorerTx: (signature) => `${EXPLORER}/tx/${signature}${suffix}`,
+  };
+  cache.set(cluster, net);
+  return net;
+}
 
 /** Smallest unit of BACH (1 BACH = 10^12 semitone), analogous to lamports. */
 export const SEMITONE_PER_BACH = 10n ** 12n;
-
-const EXPLORER = "https://explorer.solana.com";
-const EXPLORER_SUFFIX = `?cluster=${CLUSTER}`;
-
-export function explorerAddress(address: PublicKey | string): string {
-  const a = typeof address === "string" ? address : address.toBase58();
-  return `${EXPLORER}/address/${a}${EXPLORER_SUFFIX}`;
-}
-
-export function explorerTx(signature: string): string {
-  return `${EXPLORER}/tx/${signature}${EXPLORER_SUFFIX}`;
-}
 
 export function shortAddress(address: PublicKey | string, chars = 4): string {
   const a = typeof address === "string" ? address : address.toBase58();

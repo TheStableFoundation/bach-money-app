@@ -10,7 +10,7 @@
  *   3. fund the faucet with a little SOL (ATA rent + fees)
  *   4. verify the faucet can mint
  *
- * Prints FAUCET_SECRET_KEY to put in apps/app/.env.local. Run:
+ * Prints FAUCET_SECRET_KEY_<CLUSTER> to put in apps/app/.env.local. Run:
  *   pnpm --filter @bach-money/scripts setup-faucet:devnet
  *   pnpm --filter @bach-money/scripts setup-faucet:testnet
  */
@@ -104,8 +104,9 @@ async function main() {
   await mintTo(c, faucet, COLLATERAL_MINT, ata.address, faucet, 1_000_000_000n);
   console.log("Verified: faucet minted 1 test collateral to payer.");
 
+  const envName = `FAUCET_SECRET_KEY_${cluster.toUpperCase()}`;
   console.log("\nSet this in apps/app/.env.local:\n");
-  console.log(`FAUCET_SECRET_KEY=${JSON.stringify([...faucet.secretKey])}`);
+  console.log(`${envName}=${JSON.stringify([...faucet.secretKey])}`);
 }
 
 main().catch((e) => {
