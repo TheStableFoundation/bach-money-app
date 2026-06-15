@@ -49,23 +49,21 @@ bach-money-app/
 │       ├── base.json             # base compiler options
 │       └── nextjs.json           # extends base, adds DOM libs and react-jsx
 │
-├── apps/
-│   └── app/                      # @bach-money/app — Next.js CDP frontend
-│       ├── package.json          # depends on @bach-money/sdk (workspace:*)
-│       ├── next.config.ts
-│       ├── tsconfig.json         # extends ../../packages/config-typescript/nextjs.json
-│       ├── postcss.config.mjs
-│       ├── next-env.d.ts
-│       ├── app/
-│       │   ├── layout.tsx
-│       │   ├── page.tsx
-│       │   ├── globals.css
-│       │   ├── buy-crypto/
-│       │   │   └── page.tsx      # Stripe crypto onramp UI
-│       │   └── api/
-│       │       └── create-onramp-session/
-│       │           └── route.ts  # POST — creates Stripe onramp session
-│       └── public/
+├── apps/                         # all deployable front-ends live here
+│   ├── app/                      # @bach-money/app — Next.js CDP dApp (app.bach.money)
+│   │   ├── package.json          # depends on @bach-money/sdk (workspace:*)
+│   │   ├── next.config.ts        # output: "standalone" + outputFileTracingRoot
+│   │   ├── tsconfig.json         # extends ../../packages/config-typescript/nextjs.json
+│   │   ├── app/
+│   │   │   ├── layout.tsx
+│   │   │   ├── page.tsx
+│   │   │   ├── globals.css       # shared Scandinavian design tokens
+│   │   │   ├── buy-crypto/page.tsx
+│   │   │   └── api/create-onramp-session/route.ts  # POST — Stripe onramp session
+│   │   └── public/
+│   ├── web/                      # @bach-money/web — Next.js marketing site (bach.money)
+│   ├── docs/                     # @bach-money/docs — Astro static docs (docs.bach.money)
+│   └── stats/                    # @bach-money/stats — Next.js dashboard (stats.bach.money)
 │
 └── docs/                         # developer markdown docs (not a build input)
     ├── DEVELOPER_GUIDE.md
@@ -156,9 +154,22 @@ cargo check                            # check Rust program
 cargo test --manifest-path protocol/Cargo.toml  # run protocol unit tests
 ```
 
+## Deployable apps
+
+Everything is in this one monorepo under `apps/`. There are no separate
+front-end repos anymore — the old `bach-money` (marketing), `bach-money-docs`,
+and `bach-money-stats` repos have been folded in and are deprecated.
+
+| `apps/` | package | stack | smbCloud deploy |
+|---|---|---|---|
+| `app` | `@bach-money/app` | Next.js (the CDP dApp) | nextjs-ssr, pm2 `bachmoneyapp`, port 3017 — app.bach.money |
+| `web` | `@bach-money/web` | Next.js (marketing) | nextjs-ssr, pm2 `bachmoney`, port 3013 — bach.money |
+| `docs` | `@bach-money/docs` | Astro (static) | static rsync of `dist/` — docs.bach.money |
+| `stats` | `@bach-money/stats` | Next.js (dashboard) | nextjs-ssr, pm2 `bachmoneystats`, port 3014 — stats.bach.money |
+
+Deploy config for each lives in `.smb/config.toml` (`runner = 255` monorepo root
++ one `[[projects]]` entry per app; deploy a single app with `smb deploy -p <name>`).
+
 ## What this repo is not
 
-- The marketing/landing site lives in `bach-money` (separate repo)
-- The stats dashboard lives in `bach-money-stats` (separate repo)
-- The Astro docs site lives in `bach-money-docs` (separate repo)
 - There is no Anchor — the program uses raw `solana-program` with manual Borsh serialization
