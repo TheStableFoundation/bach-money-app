@@ -29,6 +29,7 @@ import {
   isValidAmount,
 } from "@/lib/format/token";
 import { WalletButton } from "@/components/WalletButton";
+import { FaucetButton } from "@/components/FaucetButton";
 import {
   buildOpenVaultTx,
   buildDepositTx,
@@ -161,6 +162,8 @@ export function VaultDashboard() {
               balances={balances}
               busy={busy}
               status={status}
+              owner={publicKey}
+              onRefresh={refresh}
               onOpen={() =>
                 run("open", () => buildOpenVaultTx(publicKey))
               }
@@ -324,6 +327,8 @@ function VaultPanel({
   balances,
   busy,
   status,
+  owner,
+  onRefresh,
   onOpen,
   onAction,
 }: {
@@ -334,6 +339,8 @@ function VaultPanel({
   balances: Balances | null;
   busy: string | null;
   status: Status;
+  owner: PublicKey;
+  onRefresh: () => Promise<void>;
   onOpen: () => void;
   onAction: (action: Action, amount: string) => void;
 }) {
@@ -370,7 +377,12 @@ function VaultPanel({
     <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
       <Card
         title="Your position"
-        aside={<Balances balances={balances} />}
+        aside={
+          <div className="flex items-center gap-4">
+            <Balances balances={balances} />
+            <FaucetButton owner={owner} onDone={onRefresh} />
+          </div>
+        }
       >
         {!vault ? (
           <div className="flex flex-col items-start gap-4">
