@@ -3,15 +3,15 @@ import Link from "next/link"
 
 export default function Footer() {
   return (
-    <footer className="border-t border-gray-100 bg-gray-50/50">
+    <footer className="border-t border-border bg-surface-2/40">
       <div className="mx-auto max-w-6xl px-6 py-16">
         <div className="grid gap-12 lg:grid-cols-3">
           {/* Brand section */}
           <div className="lg:col-span-1">
             <Link href="/" className="inline-block">
-              <span className="text-2xl font-light text-gray-900">Bach Money</span>
+              <span className="text-xl font-semibold tracking-tight text-ink">Bach Money</span>
             </Link>
-            <p className="mt-4 text-sm leading-relaxed text-gray-500">
+            <p className="mt-4 text-sm leading-relaxed text-muted">
               All content presented here is for informational purposes only and does not constitute investment,
               financial, or other advice. Please consult a qualified advisor before making any financial decisions.
             </p>
@@ -36,38 +36,35 @@ export default function Footer() {
           {/* Navigation sections */}
           <div className="grid gap-8 sm:grid-cols-2 lg:col-span-2 lg:gap-12">
             <div>
-              <h3 className="mb-6 text-sm font-medium tracking-wider text-gray-900 uppercase">Resources</h3>
+              <h3 className="label mb-6">Resources</h3>
               <ul className="space-y-3">
                 <li>
-                  <Link href="/about" className="text-sm text-gray-600 transition-colors hover:text-gray-900">
+                  <Link href="/about" className="text-sm text-muted transition-colors hover:text-ink">
                     About
                   </Link>
                 </li>
                 <li>
-                  <Link href="/contact" className="text-sm text-gray-600 transition-colors hover:text-gray-900">
+                  <Link href="/contact" className="text-sm text-muted transition-colors hover:text-ink">
                     Contact
                   </Link>
                 </li>
                 <li>
-                  <Link href="/post" className="text-sm text-gray-600 transition-colors hover:text-gray-900">
+                  <Link href="/post" className="text-sm text-muted transition-colors hover:text-ink">
                     Posts
                   </Link>
                 </li>
                 <li>
-                  <Link href="/timeline" className="text-sm text-gray-600 transition-colors hover:text-gray-900">
+                  <Link href="/timeline" className="text-sm text-muted transition-colors hover:text-ink">
                     Timeline
                   </Link>
                 </li>
                 <li>
-                  <Link href="/privacy-policy" className="text-sm text-gray-600 transition-colors hover:text-gray-900">
+                  <Link href="/privacy-policy" className="text-sm text-muted transition-colors hover:text-ink">
                     Privacy Policy
                   </Link>
                 </li>
                 <li>
-                  <Link
-                    href="/terms-of-service"
-                    className="text-sm text-gray-600 transition-colors hover:text-gray-900"
-                  >
+                  <Link href="/terms-of-service" className="text-sm text-muted transition-colors hover:text-ink">
                     Terms of Service
                   </Link>
                 </li>
@@ -75,7 +72,7 @@ export default function Footer() {
                   <Link
                     href="https://drive.google.com/file/d/1iD5Fs9xkWS_TdwGF5kV1-vHq0yye0h9X/view"
                     target="__blank"
-                    className="inline-flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-gray-900"
+                    className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-ink"
                   >
                     Whitepaper
                   </Link>
@@ -85,23 +82,43 @@ export default function Footer() {
                     href="https://docs.bach.money/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-gray-900"
+                    className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-ink"
                   >
                     Documentation
-                    <span className="rounded bg-purple-200 px-1.5 py-0.5 text-xs font-medium text-purple-700">WIP</span>
+                    <span className="label rounded-full border border-border px-1.5 py-0.5 text-[0.625rem]">WIP</span>
                   </Link>
                 </li>
               </ul>
             </div>
 
             <div>
-              <h3 className="mb-6 text-sm font-medium tracking-wider text-gray-900 uppercase">Ecosystem</h3>
+              <h3 className="label mb-6">Ecosystem</h3>
               <ul className="space-y-3">
+                <li>
+                  <Link
+                    href="https://app.bach.money/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-ink"
+                  >
+                    Launch dApp
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="https://bachmoney-stats.5mb.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-muted transition-colors hover:text-ink"
+                  >
+                    Stats
+                  </Link>
+                </li>
                 <li>
                   <Link
                     href="https://notwallet.eu"
                     title="NotWallet non-custodial Solana crypto stablecoin wallet"
-                    className="inline-flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-gray-900"
+                    className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-ink"
                   >
                     NotWallet Crypto
                   </Link>
@@ -111,29 +128,9 @@ export default function Footer() {
                     href="https://notdax.com/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm text-purple-600 transition-colors hover:text-purple-800"
+                    className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-ink"
                   >
                     NotDAX Digital Assets Exchange
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="https://bachmoney-stats.5mb.app/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-gray-600 transition-colors hover:text-gray-900"
-                  >
-                    Stats
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="https://bachmoney-app.5mb.app/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-gray-900"
-                  >
-                    Launch dApp
                   </Link>
                 </li>
               </ul>
@@ -142,17 +139,17 @@ export default function Footer() {
         </div>
 
         {/* Bottom section */}
-        <div className="mt-12 border-t border-gray-200 pt-8">
+        <div className="mt-12 border-t border-border pt-8">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted">
               © {new Date().getFullYear()}{" "}
-              <a href="https://www.thestablefoundation.org/" target="__blank">
+              <a href="https://www.thestablefoundation.org/" target="__blank" className="hover:text-ink">
                 The Stable Foundation
               </a>
               . Powered by{" "}
               <a
                 href="https://smbcloud.xyz/"
-                className="font-medium text-gray-700 transition-colors hover:text-gray-900"
+                className="font-medium text-ink transition-colors hover:text-accent-ink"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -162,14 +159,12 @@ export default function Footer() {
             </p>
 
             <div className="flex items-center gap-6">
-              <span className="text-sm text-gray-500">
-                We love open source <span style={{ color: "#9932CC" }}>💜</span>
-              </span>
+              <span className="text-sm text-muted">We love open source</span>
 
               <div className="flex items-center gap-4">
                 <a
                   href="https://github.com/TheStableFoundation"
-                  className="text-gray-400 transition-colors hover:text-gray-600"
+                  className="text-muted transition-colors hover:text-ink"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="GitHub"
@@ -184,7 +179,7 @@ export default function Footer() {
                 </a>
                 <a
                   href="https://www.linkedin.com/company/thestablefoundation/about/"
-                  className="text-gray-400 transition-colors hover:text-gray-600"
+                  className="text-muted transition-colors hover:text-ink"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="LinkedIn"

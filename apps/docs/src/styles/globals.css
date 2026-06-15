@@ -4,25 +4,26 @@
 
 @layer base {
   :root {
-    --background: 220 23% 95%; /* Base */
-    --foreground: 234 16% 35%; /* Text */
-    --muted: 220 23% 95%; /* Base */
-    --muted-foreground: 232 10% 53%; /* Overlay 2 */
-    --popover: 220 21% 89%; /* Crust */
-    --popover-foreground: 234 16% 35%; /* Text */
-    --card: 220 22% 92%; /* Mantle */
-    --card-foreground: 234 16% 35%; /* Text */
-    --border: 223 16% 83%; /* Surface 0 */
-    --input: 223 16% 83%; /* Surface 0 */
-    --primary: 220 91% 54%; /* Blue */
-    --primary-foreground: 220 23% 95%; /* Base */
-    --secondary: 220 91% 85%; /* Blue Modified */
-    --secondary-foreground: 234 16% 35%; /* Text */
-    --accent: 234 16% 35%; /* Text */
-    --accent-foreground: 220 23% 95%; /* Base */
-    --destructive: 347 87% 44%; /* Red */
-    --destructive-foreground: 220 23% 95%; /* Base */
-    --ring: 220 91% 54%; /* Blue */
+    /* Bach Money — Scandinavian tokens (warm paper / ink / fjord accent). */
+    --background: 48 24% 96%; /* paper */
+    --foreground: 40 6% 10%; /* ink */
+    --muted: 45 22% 93%; /* surface-2 */
+    --muted-foreground: 43 7% 44%; /* muted ink */
+    --popover: 0 0% 100%; /* surface */
+    --popover-foreground: 40 6% 10%;
+    --card: 0 0% 100%; /* surface */
+    --card-foreground: 40 6% 10%;
+    --border: 41 21% 88%; /* hairline */
+    --input: 41 21% 88%;
+    --primary: 205 30% 35%; /* fjord-blue accent */
+    --primary-foreground: 48 24% 96%;
+    --secondary: 45 22% 93%;
+    --secondary-foreground: 40 6% 10%;
+    --accent: 45 22% 93%; /* subtle warm hover */
+    --accent-foreground: 40 6% 10%;
+    --destructive: 8 49% 44%; /* clay */
+    --destructive-foreground: 48 24% 96%;
+    --ring: 205 30% 35%;
     --radius: 0.3rem;
 
     --Pink: 316 73% 69%;
@@ -37,25 +38,26 @@
   }
 
   .dark {
-    --background: 232 23% 18%;
-    --foreground: 227 68% 88%;
-    --muted: 232 23% 18%;
-    --muted-foreground: 228 20% 65%;
-    --popover: 236 23% 12%;
-    --popover-foreground: 227 68% 88%;
-    --card: 233 23% 15%;
-    --card-foreground: 227 68% 88%;
-    --border: 230 19% 26%;
-    --input: 230 19% 26%;
-    --primary: 220 83% 75%;
-    --primary-foreground: 232 23% 18%;
-    --secondary: 220 83% 85%;
-    --secondary-foreground: 232 23% 18%;
-    --accent: 227 68% 88%;
-    --accent-foreground: 232 23% 18%;
-    --destructive: 351 74% 73%;
-    --destructive-foreground: 232 23% 18%;
-    --ring: 267 83% 80%;
+    /* Bach Money — Scandinavian dark tokens. */
+    --background: 45 11% 7%;
+    --foreground: 44 22% 90%;
+    --muted: 49 19% 12%;
+    --muted-foreground: 44 9% 58%;
+    --popover: 48 10% 10%;
+    --popover-foreground: 44 22% 90%;
+    --card: 48 10% 10%;
+    --card-foreground: 44 22% 90%;
+    --border: 47 12% 15%;
+    --input: 47 12% 15%;
+    --primary: 204 33% 67%;
+    --primary-foreground: 45 11% 7%;
+    --secondary: 49 19% 12%;
+    --secondary-foreground: 44 22% 90%;
+    --accent: 49 19% 12%;
+    --accent-foreground: 44 22% 90%;
+    --destructive: 9 58% 65%;
+    --destructive-foreground: 45 11% 7%;
+    --ring: 204 33% 67%;
 
     --Pink: 316 74% 85%;
     --Purple: 267 83% 80%;

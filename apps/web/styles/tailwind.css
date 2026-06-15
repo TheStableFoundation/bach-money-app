@@ -2,196 +2,231 @@
 
 @config '../tailwind.config.js';
 
-/* Nordic Design System */
-@layer base {
-  /* Custom CSS Variables for Nordic palette */
+/*
+ * Bach Money — Scandinavian design tokens (shared with the dApp).
+ * Warm paper, near-black ink, hairline borders, restrained fjord-blue accent,
+ * muted sage/clay for status. Generous whitespace, no gradients, no heavy shadow.
+ */
+:root {
+  --bg: #f7f6f2;
+  --surface: #ffffff;
+  --surface-2: #f1efe9;
+  --ink: #1c1b19;
+  --muted: #76736b;
+  --border: #e7e3da;
+  --accent: #3f5e74;
+  --accent-ink: #2b4356;
+  --positive: #4e7a5b;
+  --warn: #a9772f;
+  --danger: #a8483a;
+}
+
+@media (prefers-color-scheme: dark) {
   :root {
-    /* Purple Design System - extracted from app-icon-v2.svg */
-    --purple-bg-gradient-from: #9932cc;
-    --purple-bg-gradient-via: #800080;
-    --purple-bg-gradient-to: #4b0082;
-    --purple-accent: #b768ff;
-    --purple-light: #a64dff;
-    --purple-indigo: #4b0082;
-    --purple-white: #faf5ff;
-    --purple-text: #faf5ff;
-    --purple-border: #b768ff;
-    --purple-shadow: 0 4px 24px 0 rgba(153, 50, 204, 0.15);
-
-    /* For compatibility with previous variables */
-    --nordic-white: var(--purple-white);
-    --nordic-light-gray: #f4f4f5;
-    --nordic-gray: #71717a;
-    --nordic-dark-gray: #3f3f46;
-    --nordic-charcoal: #18181b;
-    --nordic-accent: var(--purple-accent);
-    --nordic-blue: var(--purple-indigo);
+    --bg: #141310;
+    --surface: #1b1a16;
+    --surface-2: #232118;
+    --ink: #ece9e1;
+    --muted: #9b978c;
+    --border: #2b2922;
+    --accent: #8fb0c6;
+    --accent-ink: #b9d0df;
+    --positive: #8bbf98;
+    --warn: #d6a261;
+    --danger: #d98072;
   }
+}
 
-  /* Enhanced typography for Nordic minimalism */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-positive: var(--positive);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@layer base {
   html {
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    font-variant-ligatures: contextual;
+    scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   body {
-    font-family:
-      "Inter",
-      -apple-system,
-      BlinkMacSystemFont,
-      "Segoe UI",
-      Roboto,
-      Helvetica,
-      Arial,
-      sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
     font-weight: 400;
     line-height: 1.6;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.005em;
   }
 
-  /* Improved heading hierarchy */
+  /* Headings: confident semibold + tight tracking, matching the dApp. */
   h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
-    font-weight: 300;
-    letter-spacing: -0.025em;
-    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    color: var(--ink);
   }
 
-  h1 {
-    font-weight: 200;
-    letter-spacing: -0.05em;
-  }
-
-  /* Purple-inspired selection */
   ::selection {
-    background-color: rgba(153, 50, 204, 0.18); /* #9932CC with opacity */
-    color: var(--purple-text);
+    background-color: color-mix(in srgb, var(--accent) 22%, transparent);
+    color: var(--ink);
   }
 
-  /* Smooth scrolling */
-  html {
-    scroll-behavior: smooth;
-  }
-
-  /* Focus styles for accessibility */
   :focus-visible {
-    outline: 2px solid var(--purple-accent);
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
     border-radius: 2px;
   }
 
-  /*
-    The default border color has changed to `currentColor` in Tailwind CSS v4,
-    so we've added these compatibility styles to make sure everything still
-    looks the same as it did with Tailwind CSS v3.
-  */
+  /* Hairline default border (Tailwind v4 defaults to currentColor). */
   *,
   ::after,
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
+    border-color: var(--border);
   }
 }
 
-/* Component layer for Nordic design patterns */
-@layer components {
-  /* Purple button patterns */
-  .btn-nordic {
-    @apply inline-flex items-center justify-center rounded-lg px-6 py-3 text-sm font-medium transition-all duration-200 focus:ring-2 focus:ring-offset-2 focus:outline-none;
-    background-image: linear-gradient(
-      135deg,
-      var(--purple-bg-gradient-from),
-      var(--purple-bg-gradient-via),
-      var(--purple-bg-gradient-to)
-    );
-    color: var(--purple-text);
-    box-shadow: var(--purple-shadow);
-    border: 2px solid var(--purple-border);
-  }
+/* Small typographic helpers, identical to the dApp. */
+.label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--muted);
+}
 
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.mono {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/*
+ * Legacy compatibility — the old purple "Nordic" classes/vars are remapped onto
+ * the restrained Scandinavian tokens so existing markup adopts the new system
+ * with no gradients or glow. Prefer the token utilities (bg-ink, text-muted,
+ * border-border, bg-accent) in new code.
+ */
+:root {
+  --purple-bg-gradient-from: var(--ink);
+  --purple-bg-gradient-via: var(--ink);
+  --purple-bg-gradient-to: var(--accent-ink);
+  --purple-accent: var(--accent);
+  --purple-light: var(--accent);
+  --purple-indigo: var(--accent-ink);
+  --purple-white: var(--surface);
+  --purple-text: var(--ink);
+  --purple-border: var(--border);
+  --purple-shadow: none;
+
+  --nordic-white: var(--surface);
+  --nordic-light-gray: var(--surface-2);
+  --nordic-gray: var(--muted);
+  --nordic-dark-gray: var(--ink);
+  --nordic-charcoal: var(--ink);
+  --nordic-accent: var(--accent);
+  --nordic-blue: var(--accent);
+}
+
+@layer components {
+  .btn-nordic,
   .btn-nordic-primary {
-    @apply text-white;
-    background: linear-gradient(135deg, var(--purple-bg-gradient-from), var(--purple-bg-gradient-to));
-    border-color: var(--purple-accent);
-    color: var(--purple-text);
-    box-shadow: var(--purple-shadow);
+    @apply inline-flex h-11 items-center justify-center rounded-lg px-6 text-sm font-medium transition-colors focus:outline-none;
+    background: var(--ink);
+    color: var(--bg);
+    border: 1px solid var(--ink);
+    box-shadow: none;
+  }
+  .btn-nordic:hover,
+  .btn-nordic-primary:hover {
+    background: var(--accent-ink);
+    border-color: var(--accent-ink);
   }
 
   .btn-nordic-secondary {
-    @apply border;
-    border-color: var(--purple-accent);
-    background: var(--purple-white);
-    color: var(--purple-bg-gradient-from);
-    box-shadow: var(--purple-shadow);
+    @apply inline-flex h-11 items-center justify-center rounded-lg px-6 text-sm font-medium transition-colors focus:outline-none;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--border);
+    box-shadow: none;
+  }
+  .btn-nordic-secondary:hover {
+    background: var(--surface-2);
   }
 
-  /* Purple card patterns */
   .card-nordic {
-    @apply rounded-2xl border transition-shadow duration-200 hover:shadow-lg;
-    border-color: var(--purple-border);
-    background: linear-gradient(
-      135deg,
-      var(--purple-bg-gradient-from),
-      var(--purple-bg-gradient-via),
-      var(--purple-bg-gradient-to)
-    );
-    color: var(--purple-text);
-    box-shadow: var(--purple-shadow);
+    @apply rounded-xl border transition-colors;
+    border-color: var(--border);
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: none;
+  }
+  .card-nordic:hover {
+    border-color: color-mix(in srgb, var(--ink) 18%, var(--border));
   }
 
-  /* Purple section spacing */
   .section-nordic {
     @apply py-16 md:py-20 lg:py-24;
-    background: linear-gradient(135deg, var(--purple-bg-gradient-from), var(--purple-bg-gradient-to));
-    color: var(--purple-text);
+    background: var(--bg);
+    color: var(--ink);
   }
 
-  /* Purple text hierarchy */
   .text-nordic-hero {
-    @apply text-5xl font-light tracking-tight md:text-6xl lg:text-7xl;
-    color: var(--purple-text);
-    text-shadow: 0 2px 8px var(--purple-bg-gradient-to);
+    @apply text-5xl font-semibold tracking-tight md:text-6xl lg:text-7xl;
+    color: var(--ink);
+    text-shadow: none;
   }
 
   .text-nordic-title {
-    @apply text-3xl font-light md:text-4xl;
-    color: var(--purple-accent);
+    @apply text-3xl font-semibold tracking-tight md:text-4xl;
+    color: var(--ink);
   }
 
   .text-nordic-subtitle {
-    @apply text-xl font-light md:text-2xl;
-    color: var(--purple-light);
+    @apply text-xl font-normal md:text-2xl;
+    color: var(--muted);
   }
 
   .text-nordic-body {
     @apply text-lg leading-relaxed;
-    color: var(--purple-text);
+    color: var(--muted);
   }
 }
 
-/* Utilities layer for Nordic-specific utilities */
 @layer utilities {
-  /* Purple spacing utilities */
   .space-nordic {
     @apply space-y-8 md:space-y-12 lg:space-y-16;
   }
 
-  /* Purple animation utilities */
   .animate-fade-in-up {
-    animation: fadeInUp 0.6s ease-out forwards;
+    animation: fadeInUp 0.5s ease-out forwards;
   }
 
   @keyframes fadeInUp {
     from {
       opacity: 0;
-      transform: translateY(20px);
+      transform: translateY(12px);
     }
     to {
       opacity: 1;
@@ -199,9 +234,9 @@
     }
   }
 
-  /* Purple gradient utilities */
+  /* No gradients in the system — flatten to the paper surface. */
   .bg-nordic-gradient,
   .bg-purple-gradient {
-    background: linear-gradient(135deg, var(--purple-bg-gradient-from) 0%, var(--purple-bg-gradient-to) 100%);
+    background: var(--surface-2);
   }
 }
