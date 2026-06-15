@@ -1,10 +1,58 @@
+name = "bach-money-app"
+description = "The Stable Foundation — Bach Money monorepo (smbCloud Deploy)."
 
-name = "bachmoneyapp"
-description = "The Stable Foundation decentralized application."
+# Umbrella workspace. runner = 255 (Monorepo) makes `smb deploy` operate on the
+# [[projects]] entries below; deploy a single app with `smb deploy -p <name>`.
 [project]
-id = 20
+id = 35
+name = "bach-money-app"
+runner = 255
+
+# ── apps/app — the Bach Money dApp (Next.js SSR) ─────────────────────────────
+# Domains (nginx → 127.0.0.1:3017, one server block, SAN cert "bach-money-app"):
+#   - app.bach.money         (canonical; A 159.69.86.233)
+#   - bachmoney-app.5mb.app  (smbCloud subdomain)
+[[projects]]
+id = 35
 name = "bachmoneyapp"
-repository = "bachmoneyapp"
-description = "The Stable Foundation decentralized application."
-created_at = "2025-06-21T13:12:35.026068+00:00"
-updated_at = "2025-06-21T13:12:35.026068+00:00"
+frontend_app_id = "a5b57a49-a3f6-42b0-9b22-a1d62cc1c7b6"
+deploy_repo_id = 25
+runner = 0
+kind = "nextjs-ssr"
+source = "apps/app"
+source_path = "apps/app"
+path = "apps/web/bachmoneyapp"
+port = 3017
+pm2_app = "bachmoneyapp"
+package_manager = "pnpm"
+
+# ── apps/web — bach.money marketing site (Next.js SSR) ───────────────────────
+# Not yet migrated to standalone output; configure + deploy in a follow-up.
+[[projects]]
+id = 35
+name = "bachmoney"
+frontend_app_id = "a96ed4be-6022-4cff-9bb0-c22ace82bb8a"
+deploy_repo_id = 26
+runner = 0
+kind = "nextjs-ssr"
+source = "apps/web"
+source_path = "apps/web"
+path = "apps/web/bachmoney"
+port = 3013
+pm2_app = "bachmoney"
+package_manager = "pnpm"
+
+# ── apps/docs — docs.bach.money (Astro static) ───────────────────────────────
+# Static rsync deploy; configure + deploy in a follow-up.
+[[projects]]
+id = 35
+name = "bachmoneydocs"
+frontend_app_id = "eaba25c6-0cef-4c5a-9610-5b61225e55f9"
+deploy_repo_id = 31
+runner = 1
+deployment_method = 1
+source = "apps/docs"
+source_path = "apps/docs"
+output = "dist"
+path = "apps/web/bachmoneydocs"
+package_manager = "pnpm"
