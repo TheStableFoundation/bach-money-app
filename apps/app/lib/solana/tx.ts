@@ -14,15 +14,15 @@ import {
   findCollateralPda,
   findVaultPda,
 } from "@bach-money/sdk";
-import { PROGRAM_ID, COLLATERAL_MINT, TONEUSD_MINT } from "./config";
+import type { ResolvedNetwork } from "./config";
 
-async function derivePdas(owner: PublicKey) {
-  const [configPda] = await findConfigPda(PROGRAM_ID);
+async function derivePdas(net: ResolvedNetwork, owner: PublicKey) {
+  const [configPda] = await findConfigPda(net.programId);
   const [collateralConfigPda] = await findCollateralPda(
-    COLLATERAL_MINT,
-    PROGRAM_ID,
+    net.collateralMint,
+    net.programId,
   );
-  const [vaultPda] = await findVaultPda(owner, COLLATERAL_MINT, PROGRAM_ID);
+  const [vaultPda] = await findVaultPda(owner, net.collateralMint, net.programId);
   return { configPda, collateralConfigPda, vaultPda };
 }
 
@@ -33,27 +33,31 @@ async function accountExists(
   return (await connection.getAccountInfo(account)) !== null;
 }
 
-export async function buildOpenVaultTx(owner: PublicKey): Promise<Transaction> {
-  const { configPda, collateralConfigPda, vaultPda } = await derivePdas(owner);
+export async function buildOpenVaultTx(
+  net: ResolvedNetwork,
+  owner: PublicKey,
+): Promise<Transaction> {
+  const { configPda, collateralConfigPda, vaultPda } = await derivePdas(net, owner);
   return new Transaction().add(
     openVault({
       owner,
       configPda,
       collateralConfigPda,
       vaultPda,
-      programId: PROGRAM_ID,
+      programId: net.programId,
     }),
   );
 }
 
 export async function buildDepositTx(
+  net: ResolvedNetwork,
   owner: PublicKey,
   collateralVault: PublicKey,
   amount: bigint,
 ): Promise<Transaction> {
-  const { configPda, collateralConfigPda, vaultPda } = await derivePdas(owner);
+  const { configPda, collateralConfigPda, vaultPda } = await derivePdas(net, owner);
   const ownerCollateralAta = getAssociatedTokenAddressSync(
-    COLLATERAL_MINT,
+    net.collateralMint,
     owner,
   );
   return new Transaction().add(
@@ -66,7 +70,7 @@ export async function buildDepositTx(
         ownerCollateralAta,
         collateralVault,
         tokenProgram: TOKEN_PROGRAM_ID,
-        programId: PROGRAM_ID,
+        programId: net.programId,
       },
       amount,
     ),
@@ -74,13 +78,14 @@ export async function buildDepositTx(
 }
 
 export async function buildWithdrawTx(
+  net: ResolvedNetwork,
   owner: PublicKey,
   collateralVault: PublicKey,
   amount: bigint,
 ): Promise<Transaction> {
-  const { configPda, collateralConfigPda, vaultPda } = await derivePdas(owner);
+  const { configPda, collateralConfigPda, vaultPda } = await derivePdas(net, owner);
   const ownerCollateralAta = getAssociatedTokenAddressSync(
-    COLLATERAL_MINT,
+    net.collateralMint,
     owner,
   );
   return new Transaction().add(
@@ -93,7 +98,7 @@ export async function buildWithdrawTx(
         ownerCollateralAta,
         collateralVault,
         tokenProgram: TOKEN_PROGRAM_ID,
-        programId: PROGRAM_ID,
+        programId: net.programId,
       },
       amount,
     ),
@@ -101,12 +106,13 @@ export async function buildWithdrawTx(
 }
 
 export async function buildMintTx(
+  net: ResolvedNetwork,
   connection: Connection,
   owner: PublicKey,
   amount: bigint,
 ): Promise<Transaction> {
-  const { configPda, collateralConfigPda, vaultPda } = await derivePdas(owner);
-  const ownerStableAta = getAssociatedTokenAddressSync(TONEUSD_MINT, owner);
+  const { configPda, collateralConfigPda, vaultPda } = await derivePdas(net, owner);
+  const ownerStableAta = getAssociatedTokenAddressSync(net.toneUsdMint, owner);
 
   const tx = new Transaction();
   if (!(await accountExists(connection, ownerStableAta))) {
@@ -116,7 +122,7 @@ export async function buildMintTx(
         owner,
         ownerStableAta,
         owner,
-        TONEUSD_MINT,
+        net.toneUsdMint,
       ),
     );
   }
@@ -127,10 +133,10 @@ export async function buildMintTx(
         configPda,
         collateralConfigPda,
         vaultPda,
-        stableMint: TONEUSD_MINT,
+        stableMint: net.toneUsdMint,
         ownerStableAta,
         tokenProgram: TOKEN_PROGRAM_ID,
-        programId: PROGRAM_ID,
+        programId: net.programId,
       },
       amount,
     ),
@@ -139,11 +145,12 @@ export async function buildMintTx(
 }
 
 export async function buildBurnTx(
+  net: ResolvedNetwork,
   owner: PublicKey,
   amount: bigint,
 ): Promise<Transaction> {
-  const { configPda, collateralConfigPda, vaultPda } = await derivePdas(owner);
-  const ownerStableAta = getAssociatedTokenAddressSync(TONEUSD_MINT, owner);
+  const { configPda, collateralConfigPda, vaultPda } = await derivePdas(net, owner);
+  const ownerStableAta = getAssociatedTokenAddressSync(net.toneUsdMint, owner);
   return new Transaction().add(
     burnStablecoin(
       {
@@ -151,10 +158,10 @@ export async function buildBurnTx(
         configPda,
         collateralConfigPda,
         vaultPda,
-        stableMint: TONEUSD_MINT,
+        stableMint: net.toneUsdMint,
         ownerStableAta,
         tokenProgram: TOKEN_PROGRAM_ID,
-        programId: PROGRAM_ID,
+        programId: net.programId,
       },
       amount,
     ),

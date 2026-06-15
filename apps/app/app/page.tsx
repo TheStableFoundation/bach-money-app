@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { NetworkSwitcher } from "@/components/NetworkSwitcher";
+import { SiteFooter } from "@/components/SiteFooter";
 
 export default function Home() {
   return (
@@ -7,9 +9,7 @@ export default function Home() {
         <span className="text-base font-semibold tracking-tight">
           Bach Money
         </span>
-        <span className="label rounded-full border border-border px-2 py-0.5">
-          Devnet
-        </span>
+        <NetworkSwitcher />
       </header>
 
       <main className="flex flex-1 flex-col justify-center py-16">
@@ -40,17 +40,7 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="flex flex-wrap gap-6 border-t border-border pt-6 text-sm text-muted">
-        <a className="hover:text-ink" href="https://docs.bach.money" target="_blank" rel="noopener noreferrer">
-          Docs
-        </a>
-        <a className="hover:text-ink" href="https://bachmoney-stats.5mb.app" target="_blank" rel="noopener noreferrer">
-          Stats
-        </a>
-        <a className="hover:text-ink" href="https://bach.money" target="_blank" rel="noopener noreferrer">
-          bach.money →
-        </a>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

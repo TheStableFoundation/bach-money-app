@@ -1,5 +1,5 @@
 /**
- * Vault smoke test (devnet).
+ * Vault smoke test (devnet / testnet).
  *
  * Exercises the full user lifecycle against the live program using the same SDK
  * the frontend uses: open vault -> deposit collateral -> mint toneUSD ->
@@ -7,17 +7,14 @@
  *
  * Uses the bootstrap payer (which holds test collateral). Run:
  *   pnpm --filter @bach-money/scripts smoke:devnet
+ *   pnpm --filter @bach-money/scripts smoke:testnet
  */
 
-import { homedir } from "node:os";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import {
   Connection,
   Keypair,
   PublicKey,
   Transaction,
-  clusterApiUrl,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
 import {
@@ -37,14 +34,13 @@ import {
   findCollateralPda,
   findVaultPda,
 } from "@bach-money/sdk";
+import { resolveNetwork, resolveMints, loadKeypair } from "./networks.ts";
 
-const RPC = process.env.RPC_URL ?? clusterApiUrl("devnet");
-const KEYPAIR_PATH =
-  process.env.KEYPAIR_PATH ?? join(homedir(), ".config", "solana", "main_0.json");
+const NET = resolveNetwork();
+const { cluster, rpcUrl, keypairPath, programId } = NET;
+const { toneUsdMint: TONEUSD_MINT, collateralMint: COLLATERAL_MINT } =
+  resolveMints(NET);
 
-const PROGRAM_ID = new PublicKey("yh9n52WPmWJBYTsBU1kBYfLSuxWY8zZTUPbjDB6d7wc");
-const TONEUSD_MINT = new PublicKey("B4wtMQyvYaY9bDNTnBY3sRczqRUp3zW8P7CaFqLVCb5f");
-const COLLATERAL_MINT = new PublicKey("HjsxowJNtQoy2fEzdRqdYaWf7nNpDQumTG7k61RYmnrg");
 const COLLATERAL_DECIMALS = 9;
 const TONEUSD_DECIMALS = 6;
 
@@ -57,12 +53,6 @@ const fmt = (a: bigint, d: number) => {
   const base = 10n ** BigInt(d);
   return `${a / base}.${(a % base).toString().padStart(d, "0").replace(/0+$/, "") || "0"}`;
 };
-
-function loadKeypair(path: string): Keypair {
-  return Keypair.fromSecretKey(
-    Uint8Array.from(JSON.parse(readFileSync(path, "utf8")) as number[]),
-  );
-}
 
 async function tokenBalance(c: Connection, ata: PublicKey): Promise<bigint> {
   try {
@@ -85,18 +75,18 @@ async function send(
 }
 
 async function main() {
-  const c = new Connection(RPC, "confirmed");
-  const payer = loadKeypair(KEYPAIR_PATH);
+  const c = new Connection(rpcUrl, "confirmed");
+  const payer = loadKeypair(keypairPath);
   const owner = payer.publicKey;
-  const client = new BachMoneyClient(c, PROGRAM_ID);
+  const client = new BachMoneyClient(c, programId);
 
-  const [configPda] = await findConfigPda(PROGRAM_ID);
-  const [collateralConfigPda] = await findCollateralPda(COLLATERAL_MINT, PROGRAM_ID);
-  const [vaultPda] = await findVaultPda(owner, COLLATERAL_MINT, PROGRAM_ID);
+  const [configPda] = await findConfigPda(programId);
+  const [collateralConfigPda] = await findCollateralPda(COLLATERAL_MINT, programId);
+  const [vaultPda] = await findVaultPda(owner, COLLATERAL_MINT, programId);
   const ownerCollateralAta = getAssociatedTokenAddressSync(COLLATERAL_MINT, owner);
   const ownerStableAta = getAssociatedTokenAddressSync(TONEUSD_MINT, owner);
 
-  console.log("Vault smoke test (devnet)");
+  console.log(`Vault smoke test (${cluster})`);
   console.log("  payer:", owner.toBase58());
 
   const market = await client.fetchCollateralConfig(COLLATERAL_MINT);
@@ -116,7 +106,7 @@ async function main() {
       c,
       payer,
       new Transaction().add(
-        openVault({ owner, configPda, collateralConfigPda, vaultPda, programId: PROGRAM_ID }),
+        openVault({ owner, configPda, collateralConfigPda, vaultPda, programId }),
       ),
       "openVault",
     );
@@ -138,7 +128,7 @@ async function main() {
           ownerCollateralAta,
           collateralVault,
           tokenProgram: TOKEN_PROGRAM_ID,
-          programId: PROGRAM_ID,
+          programId,
         },
         DEPOSIT,
       ),
@@ -163,7 +153,7 @@ async function main() {
         stableMint: TONEUSD_MINT,
         ownerStableAta,
         tokenProgram: TOKEN_PROGRAM_ID,
-        programId: PROGRAM_ID,
+        programId,
       },
       MINT,
     ),
@@ -184,7 +174,7 @@ async function main() {
           stableMint: TONEUSD_MINT,
           ownerStableAta,
           tokenProgram: TOKEN_PROGRAM_ID,
-          programId: PROGRAM_ID,
+          programId,
         },
         REPAY,
       ),
@@ -206,7 +196,7 @@ async function main() {
           ownerCollateralAta,
           collateralVault,
           tokenProgram: TOKEN_PROGRAM_ID,
-          programId: PROGRAM_ID,
+          programId,
         },
         WITHDRAW,
       ),
@@ -225,7 +215,7 @@ async function main() {
   console.log("  debt       :", fmt(vault.debtAmount, TONEUSD_DECIMALS), "toneUSD");
   console.log("  ratio      :", Number.isFinite(ratio) ? `${(ratio * 100).toFixed(1)}%` : "∞");
   console.log("  toneUSD bal:", fmt(endStable, TONEUSD_DECIMALS));
-  console.log("\n✅ Full lifecycle succeeded on devnet.");
+  console.log(`\n✅ Full lifecycle succeeded on ${cluster}.`);
 }
 
 main().catch((e) => {

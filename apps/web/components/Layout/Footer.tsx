@@ -106,7 +106,7 @@ export default function Footer() {
                 </li>
                 <li>
                   <Link
-                    href="https://bachmoney-stats.5mb.app/"
+                    href="https://stats.bach.money/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-muted transition-colors hover:text-ink"

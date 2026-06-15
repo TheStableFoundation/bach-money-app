@@ -1,29 +1,26 @@
 /**
- * Faucet setup (devnet).
+ * Faucet setup (devnet / testnet).
  *
  * Makes public testing possible: gives the main collateral mint a dedicated
  * faucet authority (not the main wallet) so a server-side API route can mint
  * test collateral to any wallet.
  *
- *   1. generate/load a faucet keypair (gitignored)
+ *   1. generate/load a per-cluster faucet keypair (gitignored)
  *   2. transfer the collateral mint's MintTokens authority payer -> faucet
  *   3. fund the faucet with a little SOL (ATA rent + fees)
  *   4. verify the faucet can mint
  *
- * Prints FAUCET_SECRET_KEY to put in apps/app/.env.local. Run:
+ * Prints FAUCET_SECRET_KEY_<CLUSTER> to put in apps/app/.env.local. Run:
  *   pnpm --filter @bach-money/scripts setup-faucet:devnet
+ *   pnpm --filter @bach-money/scripts setup-faucet:testnet
  */
 
-import { homedir } from "node:os";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
 import {
   Connection,
   Keypair,
-  PublicKey,
   SystemProgram,
   Transaction,
-  clusterApiUrl,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
 import {
@@ -33,29 +30,28 @@ import {
   getOrCreateAssociatedTokenAccount,
   mintTo,
 } from "@solana/spl-token";
+import { resolveNetwork, resolveMints, loadKeypair } from "./networks.ts";
 
-const RPC = process.env.RPC_URL ?? clusterApiUrl("devnet");
-const KEYPAIR_PATH =
-  process.env.KEYPAIR_PATH ?? join(homedir(), ".config", "solana", "main_0.json");
-const COLLATERAL_MINT = new PublicKey("HjsxowJNtQoy2fEzdRqdYaWf7nNpDQumTG7k61RYmnrg");
-const FAUCET_PATH = join(import.meta.dirname, ".faucet-keypair.devnet.json");
+const NET = resolveNetwork();
+const { cluster, rpcUrl, keypairPath, faucetPath } = NET;
+const { collateralMint: COLLATERAL_MINT } = resolveMints(NET);
 const FUND_LAMPORTS = 300_000_000; // 0.3 SOL
 
-const load = (p: string) =>
-  Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync(p, "utf8")) as number[]));
-
 async function main() {
-  const c = new Connection(RPC, "confirmed");
-  const payer = load(KEYPAIR_PATH);
+  const c = new Connection(rpcUrl, "confirmed");
+  const payer = loadKeypair(keypairPath);
+
+  console.log(`Faucet setup (${cluster})`);
+  console.log("  collateral mint:", COLLATERAL_MINT.toBase58());
 
   // 1. faucet keypair
   let faucet: Keypair;
-  if (existsSync(FAUCET_PATH)) {
-    faucet = load(FAUCET_PATH);
+  if (existsSync(faucetPath)) {
+    faucet = loadKeypair(faucetPath);
     console.log("Reusing faucet keypair:", faucet.publicKey.toBase58());
   } else {
     faucet = Keypair.generate();
-    writeFileSync(FAUCET_PATH, JSON.stringify([...faucet.secretKey]));
+    writeFileSync(faucetPath, JSON.stringify([...faucet.secretKey]));
     console.log("Generated faucet keypair:", faucet.publicKey.toBase58());
   }
 
@@ -108,8 +104,9 @@ async function main() {
   await mintTo(c, faucet, COLLATERAL_MINT, ata.address, faucet, 1_000_000_000n);
   console.log("Verified: faucet minted 1 test collateral to payer.");
 
+  const envName = `FAUCET_SECRET_KEY_${cluster.toUpperCase()}`;
   console.log("\nSet this in apps/app/.env.local:\n");
-  console.log(`FAUCET_SECRET_KEY=${JSON.stringify([...faucet.secretKey])}`);
+  console.log(`${envName}=${JSON.stringify([...faucet.secretKey])}`);
 }
 
 main().catch((e) => {

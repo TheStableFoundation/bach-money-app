@@ -8,7 +8,7 @@ import {
 } from "@solana/wallet-adapter-react";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import type { Adapter } from "@solana/wallet-adapter-base";
-import { RPC_ENDPOINT } from "@/lib/solana/config";
+import { NetworkProvider, useNetwork } from "@/lib/solana/network";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 // @solana/web3.js and the SDK reference the global Buffer; provide it in the
@@ -18,11 +18,23 @@ if (typeof globalThis !== "undefined" && !("Buffer" in globalThis)) {
 }
 
 export function Providers({ children }: { children: ReactNode }) {
+  return (
+    <NetworkProvider>
+      <SolanaProviders>{children}</SolanaProviders>
+    </NetworkProvider>
+  );
+}
+
+function SolanaProviders({ children }: { children: ReactNode }) {
+  const { network } = useNetwork();
+
   // Empty list — modern wallets are discovered via the Wallet Standard.
   const wallets = useMemo<Adapter[]>(() => [], []);
 
+  // ConnectionProvider re-creates the Connection when the endpoint changes, so
+  // switching clusters rewires every useConnection() consumer automatically.
   return (
-    <ConnectionProvider endpoint={RPC_ENDPOINT}>
+    <ConnectionProvider endpoint={network.rpcEndpoint}>
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
